@@ -1,0 +1,483 @@
+-- a program that pissed RichardG off so much, is outdated now
+
+local tBlocks={
+	"Air",
+	"Stone",
+	"Grass",
+	"Dirt",
+	"Cobblestone",
+	{
+		"Oak Plank",
+		"Spruce Plank",
+		"Birch Plank",
+		"Jungle Plank",
+	},
+	{
+		"Oak Sappling",
+		"Spruce Sappling",
+		"Birch Sappling",
+		"Jungle Sappling",
+	},
+	8,
+	"Water Source",
+	"Water Still",
+	"Lava Source",
+	"Lava Still",
+	"Sand",
+	"Gravel",
+	"Gold Ore",
+	"Iron Ore",
+	"Coal Ore",
+	{
+		"Oak Log",
+		"Spruce Log",
+		"Birch Log",
+		"Jungle Sappling",
+	},
+	{
+		"Oak Leaves",
+		"Spruce Leaves",
+		"Birch Leaves",
+		"Jungle Leaves",
+	},
+	"Sponge",
+	"Glass",
+	"Lapis Ore",
+	"Lapis Block",
+	"Dispencer",
+	{
+		"Sandstone",
+		"Chiseled Sandstone",
+		"Smooth Sandstone",
+	},
+	"Note Block",
+	27,
+	"Powered Rail",
+	"Detector Rail",
+	"Sticky Piston",
+	"Cobweb",
+	{
+		1,
+		"Tall Grass",
+		"Fern",
+	},
+	"Dead Bush",
+	"Piston",
+	35,
+	{
+		"Wool",
+		"Orange Wool",
+		"Magenta Wool",
+		"Light Blue Wool",
+		"Yellow Wool",
+		"Lime Wool",
+		"Pink Wool",
+		"Gray Wool",
+		"Light Gray Wool",
+		"Cyan Wool",
+		"Purple Wool",
+		"Blue Wool",
+		"Brown Wool",
+		"Green Wool",
+		"Red Wool",
+		"Black Wool",
+	},
+	37,
+	"Flower",
+	"Rose",
+	"Brown Mushroom",
+	"Red Mushroom",
+	"Block of Gold",
+	"Block of Iron",
+	44,
+	{
+		"Stone Slab",
+		"Sandstone Slab",
+		"Cobblestone Slab",
+		"Brick Slab",
+		"Stone Brick Slab",
+		"Nether Brick Slab",
+	},
+	"Bricks",
+	"TNT",
+	"Bookshelves",
+	"Moss Stone",
+	"Obsidian",
+	"Torch",
+	"Fire",
+	"Spawner",
+	"Oak Wood Stairs",
+	"Chest",
+	56,
+	"Diamond Ore",
+	"Diamond Block",
+	"Crafting Table",
+	60,
+	"Farmland",
+	"Furnace",
+	65,
+	"Ladder",
+	"Rail",
+	"Stone Stairs",
+	69,
+	"Lever",
+	"Stone Pressureplate",
+	72,
+	"Wood Pressureplate",
+	"Redstone Ore",
+	76,
+	"Redstone Torch",
+	"Button",
+	"Snow",
+	"Ice",
+	"Snow",
+	"Cactus",
+	"Clay",
+	84,
+	"Jukebox",
+	"Fence",
+	"Pumpkin",
+	"Netherrack",
+	"Soul Sand",
+	"Glowstone",
+	"Portal",
+	"Jack o Lantern",
+	"Cake",
+	95,
+	"Locked Chest",
+	"Trapdoor",
+	"Silverfish Stone",
+	{
+		"Stone Bricks",
+		"Mossy Stone Bricks",
+	},
+	"Mushroom block",
+	"Mushroom block",
+	"Iron Bars",
+	"Glass Pane",
+	"Melon",
+	106,
+	"Vines",
+	"Fence Gate",
+	"Brick Stairs",
+	"Stone Brick Stairs",
+	"Mycelium",
+	"Lily Pad",
+	"Nether Brick",
+	"Nether Brick Fence",
+	"Nether Brick Stairs",
+	116,
+	"Enchantment Table",
+	119,
+	"End Portal",
+	"End Portal Frame",
+	"End Stone",
+	"Dragon Egg",
+	"Redstone Lamp",
+	126,
+	{
+		"Oak Wood Slab",
+		"Spruce Wood Slab",
+		"Birch Wood Slab",
+		"Jungle Wood Slab",
+	},
+	"Cocoa Pod",
+	"Sandstone Stairs",
+	"Emerald Ore",
+	131,
+	"Tripwire Hook",
+	133,
+	"Emerald Block",
+	"Spruce Wood Stairs",
+	"Birch Wood Stairs",
+	"Jungle Wood Stairs",
+	"Command Block",
+	"Beacon",
+	{
+		"Cobblestone Wall",
+		"Mossy Cobblestone Wall",
+	},
+	143,
+	"Wood Button",
+	145,
+	{
+		"Anvil",
+		"Slightly Damaged Anvil",
+		"Very Damaged Anvil",
+	},
+	256,
+	"Iron Shovel",
+	"Iron Pickaxe",
+	"Iron Axe",
+	"Flint and Steel",
+	"Apple",
+	"Bow",
+	"Arrow",
+	{
+		"Coal",
+		"Charcoal",
+	},
+	"Diamond",
+	"Iron",
+	"Gold",
+	"Iron Sword",
+	"Wooden Sword",
+	"Wooden Shovel",
+	"Wooden Pickaxe",
+	"Wooden Axe",
+	"Stone Sword",
+	"Stone Shovel",
+	"Stone Pickaxe",
+	"Stone Axe",
+	"Diamond Sword",
+	"Diamond Shovel",
+	"Diamond Pickaxe",
+	"Diamond Axe",
+	"Stick",
+	"Bowl",
+	"Mushroom Stew",
+	"Golden Sword",
+	"Golden Shovel",
+	"Golden Pickaxe",
+	"Golden Axe",
+	"String",
+	"Feather",
+	"Gunpowder",
+	"Wooden Hoe",
+	"Stone Hoe",
+	"Iron Hoe",
+	"Diamond Hoe",
+	"Golden Hoe",
+	"Seeds",
+	"Wheat",
+	"Bread",
+	"Leather Cap",
+	"Leather Tunic",
+	"Leather Pants",
+	"Leather Boots",
+	"Chain Helmet",
+	"Chain Chestplate",
+	"Chain Leggings",
+	"Chain Boots",
+	"Iron Helmet",
+	"Iron Chestplate",
+	"Iron Leggings",
+	"Iron Boots",
+	"Diamond Helmet",
+	"Diamond Chestplate",
+	"Diamond Leggings",
+	"Diamond Boots",
+	"Golden Helmet",
+	"Golden Chestplate",
+	"Golden Leggings",
+	"Golden Boots",
+	"Flint",
+	"Raw Porkchop",
+	"Cooked Porkchop",
+	"Painting",
+	"Golden Apple",
+	"Sign",
+	"Wooden Door",
+	"Bucket",
+	"Water Bucket",
+	"Lava Bucket",
+	"Minecart",
+	"Saddle",
+	"Iron Door",
+	"Redstone",
+	"Snowball",
+	"Boat",
+	"Leather",
+	"Milk",
+	"Brick",
+	"Clay",
+	"Sugar Cane",
+	"Paper",
+	"Book",
+	"Slimeball",
+	"Minecart With Chest",
+	"Minecart With Furnace",
+	"Egg",
+	"Compass",
+	"Fishing Rod",
+	"Clock",
+	"Glowstone Dust",
+	"Raw Fish",
+	"Cooked Fish",
+	{
+		"Ink Sac",
+		"Rose Red",
+		"Cactus Green",
+		"Cocoa Beans",
+		"Lapis Lazuli",
+		"Purple Dye",
+		"Cyan Dye",
+		"Light Gray Dye",
+		"Gray Dye",
+		"Pink Dye",
+		"Lime Dye",
+		"Dandelion Yellow",
+		"Light Blue Dye",
+		"Magenta Dye",
+		"Orange Dye",
+		"Bone Meal",
+	},
+	"Bone",
+	"Sugar",
+	"Cake",
+	"Bed",
+	"Redstone Repeater",
+	"Cookie",
+	"Map",
+	"Shears",
+	"Melon",
+	"Pumkin Seeds",
+	"Melon Seeds",
+	"Raw Beef",
+	"Steak",
+	"Raw Chicken",
+	"Cooked Chicken",
+	"Rotten Flesh",
+	"Ender Pearl",
+	"Blaze Rod",
+	"Ghast Tear",
+	"Gold Nugget",
+	"Nether Wart",
+	"Potion",
+	"Glass Bottle",
+	"Spider Eye",
+	"Fermented Spider Eye",
+	"Blaze Powder",
+	"Magma Cream",
+	"Brewing Stand",
+	"Cauldron",
+	"Eye of Ender",
+	"Glistering Melon",
+	"Spawn Egg",
+	"Bottle o' Enchanting",
+	"Fire Charge",
+	"Book and Quill",
+	"Written Book",
+	"Emerald",
+	"Item Frame",
+	"Flower Pot",
+	"Carrot",
+	"Potato",
+	"Baked Potato",
+	"Poisonous Potato",
+	"Empty Map",
+	"Golden Carrot",
+	"Head",
+	"Carrot on a Stick",
+	"Nether Star",
+	"Pumpkin Pie",
+	"Firework Rocket",
+	"Firework Star",
+	"Enchanted Book",
+}
+blocks={}
+local cblock=0
+for k,v in pairs(tBlocks) do
+	if type(v)=="number" then
+		cblock=v
+	elseif type(v)=="table" then
+		if type(v[1])=="string" then
+			blocks[tostring(cblock)]=v[1]
+		end
+		local scnum=0
+		for m,n in ipairs(v) do
+			if type(n)=="number" then
+				scnum=n
+			elseif type(n)=="string" then
+				blocks[cblock..":"..scnum]=n
+				scnum=scnum+1
+			end
+		end
+		cblock=cblock+1
+	elseif type(v)=="string" then
+		blocks[cblock..":0"]=v
+		blocks[tostring(cblock)]=v
+		cblock=cblock+1
+	end
+end
+local tArgs={...}
+local mod   = math.fmod
+local floor = math.floor
+local rbit = {}
+
+local function cap(x)
+    return mod(x,4294967296)
+end
+
+function bit.bnot(x)
+    return 4294967295-cap(x)
+end
+
+function bit.lshift(x,n)
+    return cap(cap(x)*2^n)
+end
+
+function bit.rshift(x,n)
+    return floor(cap(x)/2^n)
+end
+
+function bit.band(x,y)
+    local z,i,j = 0,1
+    for j = 0,31 do
+        if (mod(x,2)==1 and mod(y,2)==1) then
+            z = z + i
+        end
+        x = bit.rshift(x,1)
+        y = bit.rshift(y,1)
+        i = i*2
+    end
+    return z
+end
+
+function bit.bor(x,y)
+    local z,i,j = 0,1
+    for j = 0,31 do
+        if (mod(x,2)==1 or mod(y,2)==1) then
+            z = z + i
+        end
+        x = bit.rshift(x,1)
+        y = bit.rshift(y,1)
+        i = i*2
+    end
+    return z
+end
+
+function bit.bxor(x,y)
+    local z,i,j = 0,1
+    for j = 0,31 do
+        if (mod(x,2)~=mod(y,2)) then
+            z = z + i
+        end
+        x = bit.rshift(x,1)
+        y = bit.rshift(y,1)
+        i = i*2
+    end
+    return z
+end
+
+local magic = 667210757
+
+function getHash(id, meta)
+	return bit.bxor(bit.bor(bit.lshift(id,15),meta),magic)
+end
+
+function getId(hash)
+	return bit.rshift(bit.bxor(hash,magic),15)
+end
+
+function getMeta(hash)
+	return bit.band(bit.bxor(hash,magic),0x7FFF)
+end
+
+function getName(hash)
+	return blocks[getId(hash)..":"..getMeta(hash)]
+end
+
+function compareID(a,b)
+	
+end

@@ -1,0 +1,23 @@
+-- interfaces with my love2d stargate control program, will probably make a new version that uses httpnet instead
+
+local p=peripheral.wrap("back")
+while true do
+	local r=p.getDialledAddress()
+	if r~="" and p.isInitiator()~="true" then
+		local a=http.post("http://71.238.152.180:80/stargate",r)
+		if a then
+			local s=a.readAll()
+			print(s)
+			if s=="deny" then
+				p.disconnect()
+			end
+		else
+			p.disconnect()
+		end
+		while p.getDialledAddress()==r do
+			sleep(2)
+		end
+	else
+		sleep(2)
+	end
+end

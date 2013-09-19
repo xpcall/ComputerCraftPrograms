@@ -1,0 +1,132 @@
+-- verry useful tool for crafting, for example
+-- craft so_pan 8
+-- will return base materials and sub materials needed to make that item
+
+local short={
+	["so_pan"]="Solar panel",
+	["co_dust"]="Coal dust",
+	["elec_c"]="Electronic circuit",
+	["generator"]="Generator",
+	["copper"]="Copper",
+	["rubber"]="Rubber",
+	["cp_wire"]="Copper wire",
+	["redstone"]="Redstone",
+	["ref_iron"]="Refined iron",
+	["iron"]="Iron",
+	["glass"]="Glass",
+	["iron_furnace"]="Iron furnace",
+	["battery"]="Battery",
+	["tin"]="Tin",
+	["adv_c"]="Advanced circuit",
+	["gs_dust"]="Glowstone dust",
+	["nuke_gen"]="Nuclear reactor",
+	["nuke_wall"]="Reactor chamber",
+	["lapis"]="Lapis lazuli",
+	["cp_plate"]="Dense copper plate",
+	["mc_block"]="Machine block",
+}
+local recipes={
+	["so_pan"]={3,"glass",3,"co_dust",2,"elec_c",1,"generator"},
+	["cp_wire"]={3,"copper",6,"rubber"},
+	["elec_c"]={6,"cp_wire",2,"redstone",1,"ref_iron"},
+	["ref_iron"]={1,"iron"},
+	["iron_furnace"]={8,"iron"},
+	["generator"]={3,"ref_iron",1,"iron_furnace",1,"battery"},
+	["battery"]={4,"tin",2,"redstone",1,"cp_wire"},
+	["adv_c"]={2,"gs_dust",4,"redstone",2,"lapis",1,"elec_c"},
+	["nuke_gen"]={1,"adv_c",3,"nuke_wall",1,"generator"},
+	["mc_block"]={8,"ref_iron"},
+	["cp_plate"]={8,"copper"},
+	["nuke_wall"]={4,"cp_plate",1,"mc_block"},
+}
+local amt={
+	["cp_wire"]=6,
+}
+local amtinv={
+	["cp_wire"]=0,
+}
+local stk={}
+local tArgs={...}
+local pending={{tArgs[1],tonumber(tArgs[2]),1}}
+local req={}
+local bmin={}
+local tmin={}
+while #pending>0 do
+	local p=pending[1][1]
+	local c=pending[1][2]
+	local weight=pending[1][3]
+	local r=recipes[p]
+	table.remove(pending,1)
+	if not r then
+		bmin[short[p]]=(bmin[short[p]] or 0)+c
+	else
+		local wt=c
+		if amt[p] then
+			wt=math.ceil(wt/amt[p])*amt[p]
+		end
+		tmin[short[p]]=(tmin[short[p]] or 0)+wt
+		for l1=1,#r,2 do
+			local wt=c*r[l1]
+			if amt[r[l1+1]] then
+				wt=math.ceil(wt/amt[r[l1+1]])
+				amtinv[r[l1+1]]=(amtinv[r[l1+1]]-wt)%amt[r[l1+1]]
+			end
+			table.insert(pending,1,{r[l1+1],wt,weight+1})
+			req[short[p]]=req[short[p]] or {weight}
+			req[short[p]][short[r[l1+1]]]=(req[short[p]][short[r[l1+1]]] or 0)+(c*r[l1])
+		end
+	end
+end
+table.sort(req,function(a,b) return a[1]>b[1] end)
+local pending={}
+for k,v in pairs(req) do
+	table.remove(v,1)
+	table.insert(pending,{k,v,tmin[k]})
+end
+local file=fs.open("recipie","w")
+file.write("Craft:\n")
+local dat={}
+local l=1
+local function getstack(t,n)
+	if not n then
+		return o
+	end
+	for k,v in pairs(short) do
+		if v==n then
+			n=k
+			break
+		end
+	end
+	local s=stk[n] or 64
+	if n>s then
+		return  ": "..n.." ("..math.floor(n/s).."s + "..(n%s)..")\n"
+	else
+		return  ": "..n.."\n"
+	end
+end
+while pending[1] do
+	local d=pending[1]
+	table.remove(pending,1)
+	if type(d[2])=="table" then
+		dat[l+1]=infutil.rlen(d[2])+1
+		file.write(string.rep("  ",l)..d[1]..getstack(d[1],d[3]))
+		for k,v in pairs(d[2]) do
+			table.insert(pending,1,{k,v})
+		end
+		l=l+1
+	else
+		file.write(string.rep("  ",l)..d[1]..getstack(d[1],d[2]))
+	end
+	if dat[l] then
+		dat[l]=dat[l]-1
+		if dat[l]==0 then
+			l=l-1
+		end
+	end
+end
+file.write("Raw:\n")
+for k,v in pairs(bmin) do
+	file.write("  "..k..getstack(k,v))
+end
+file:close()
+shell.run("edit recipie")

@@ -1,0 +1,319 @@
+-- WIP firewolf replacement/ripoff
+
+local modem
+local channel=13001
+for k,v in pairs(rs.getSides()) do
+	if peripheral.getType(v)=="modem" then
+		modem=peripheral.wrap(v)
+		modem.open(channel)
+	end
+end
+if not term.isColor() then
+	error("color required for client")
+end
+local set
+if fs.exists("/.waterfox/") then
+	set=infutil.readPrefs("/.waterfox/settings")
+else
+	local def={
+		favs={},
+		hist={},
+	}
+	fs.makeDir("/.waterfox")
+	fs.makeDir("/.waterfox/cookies")
+	infutil.savePrefs("/.waterfox/settings",def)
+	set=def
+end
+local Mx,My=term.getSize()
+local Cx,Cy=math.floor(Mx/2),math.floor(My/2)
+local ccodes={
+	["0"]=colors.white,
+	["1"]=colors.orange,
+	["2"]=colors.magenta,
+	["3"]=colors.lightBlue,
+	["4"]=colors.yellow,
+	["5"]=colors.lime,
+	["6"]=colors.pink,
+	["7"]=colors.gray,
+	["8"]=colors.lightGray,
+	["9"]=colors.cyan,
+	["A"]=colors.purple,
+	["B"]=colors.blue,
+	["C"]=colors.brown,
+	["D"]=colors.green,
+	["E"]=colors.red,
+	["F"]=colors.black,
+}
+local function pcol(str)
+	while true do
+		local l=string.find(str,"%^")
+		if not l then
+			break
+		end
+		write(string.sub(str,1,l-1))
+		local color=ccodes[string.sub(str,l+1,l+1)]
+		if color then
+			term.setTextColor(color)
+		end
+		str=string.sub(str,l+2,-1)
+	end
+	write(str)
+end
+local mainmenu,website
+local cmenu
+local function rtop(tf)
+	term.setBackgroundColor(colors.gray)
+	term.clear()
+	term.setCursorPos(Cx-4,1)
+	term.setBackgroundColor(colors.lightBlue)
+	term.setTextColor(colors.black)
+	term.clearLine()
+	term.write("WaterFox")
+	if tf~=3 then
+		term.setCursorPos(Mx-1,1)
+		term.setBackgroundColor(colors.red)
+		term.setTextColor(colors.black)
+		if tf==1 then
+			term.write(" x")
+		elseif tf==2 then
+			term.write(" <")
+		end
+	end
+end
+local function cwrite(txt,line)
+	term.setCursorPos(Cx-math.floor(#txt/2),line or Cy)
+	term.write(txt)
+end
+local function mexit(err)
+	rtop(3)
+	term.setBackgroundColor(colors.gray)
+	term.setTextColor(colors.lightBlue)
+	cwrite(("Error:" and err) or "Bye!")
+	if err then
+		os.pullEvent("key")
+	else
+		sleep(1)
+	end
+	term.setTextColor(colors.white)
+	term.setBackgroundColor(colors.black)
+	term.setCursorPos(1,1)
+	term.clear()
+	cmenu=false
+end
+local curl=""
+local curl_hex=""
+local nbar
+nbar={
+	line="wftp://",
+	sel=1,
+	active=false,
+	render=function(line)
+		term.setTextColor(colors.black)
+		nbar.sel=math.max(math.min(nbar.sel,#nbar.line),7)
+		term.setCursorPos(1,line)
+		term.write(string.sub(nbar.line,math.max(nbar.sel,Mx-1)-(Mx-1)).." ")
+		term.setCursorPos(nbar.sel-(math.max(nbar.sel,Mx-1)-(Mx-1))+1,line)
+		term.setTextColor(colors.gray)
+	end,
+	process=function(p,line)
+		if p[1]=="key" and nbar.active then -- url bar
+			if p[2]==keys.enter then
+				curl=nbar.line
+				cmenu=website
+				return
+			elseif p[2]==keys.backspace and nbar.sel~=7 then
+				nbar.sel=nbar.sel-1
+				nbar.line=string.sub(nbar.line,1,nbar.sel)..string.sub(nbar.line,nbar.sel+2)
+				nbar.render(line)
+			elseif p[2]==keys.right then
+				nbar.sel=nbar.sel+1
+				nbar.render(line)
+			elseif p[2]==keys.left then
+				nbar.sel=nbar.sel-1
+				nbar.render(line)
+			end
+		elseif p[1]=="char" and nbar.active then -- url bar
+			nbar.line=string.sub(nbar.line,1,nbar.sel)..p[2]..string.sub(nbar.line,nbar.sel+1)
+			nbar.sel=nbar.sel+1
+			nbar.render(2)
+		end
+	end,
+}
+local news=http.get("http://pixeltoast.koding.com/WFnews")
+function mainmenu()
+	nbar.active=false
+	rtop(1)
+	term.setBackgroundColor(colors.lightGray)
+	term.setCursorPos(1,2)
+	term.clearLine()
+	term.setCursorPos(1,My)
+	term.setTextColor(colors.black)
+	term.clearLine()
+	term.write(" history  favorites  serverlist")
+	term.setTextColor(colors.gray)
+	term.setCursorPos(1,My)
+	term.write("/")
+	term.setCursorPos(9,My)
+	term.write("\\\\")
+	term.setCursorPos(20,My)
+	term.write("//")
+	term.setCursorPos(32,My)
+	term.write("\\")
+	term.setCursorPos(2,4)
+	term.setBackgroundColor(colors.gray)
+	term.setTextColor(colors.lightBlue)
+	term.clearLine()
+	term.setCursorPos(1,3)
+	if not news then
+		write("\n Oh noes! My site is down :(")
+	else
+		pcol(news.readAll())
+	end
+	term.setCursorPos(1,2)
+	term.setTextColor(colors.black)
+	term.setBackgroundColor(colors.lightGray)
+	nbar.render(2)
+	while true do
+		local p={os.pullEvent()}
+		if p[1]=="mouse_click" then
+			local x,y=p[3],p[4]
+			if y==2 then -- url bar
+				nbar.active=true
+				term.setCursorBlink(true)
+			else
+				nbar.active=false
+				term.setCursorBlink(false)
+			end
+			if y==1 and x>=Mx-1 then -- X
+				mexit()
+				return
+			end
+		end
+		nbar.process(p,2)
+		if cmenu~=mainmenu then
+			return
+		end
+	end
+end
+function website()
+	
+end
+local sandbox
+cmenu=mainmenu
+local function resolve(path)
+	local spath=".waterfox/cookies/"..curl_hex
+	if not fs.exists(spath) then
+		fs.makeDir(spath)
+	end
+	local var=fs.combine(spath,path)
+	if string.sub(var,1,#spath)==spath then
+		return var
+	end
+end
+local fs=fs
+sandbox={
+	fs={
+		open=function(path,handle)
+			local a,b=pcall(fs.open,resolve(path),handle)
+			if not a then error(b,1) end
+			return b
+		end,
+		list=function(path)
+			local a,b=pcall(fs.list,resolve(path))
+			if not a then error(b,1) end
+			return b
+		end,
+		makeDir=function(path)
+			local a,b=pcall(fs.makeDir,resolve(path))
+			if not a then error(b,1) end
+			return b
+		end,
+		delete=function(path)
+			local a,b=pcall(fs.delete,resolve(path))
+			if not a then error(b,1) end
+			return b
+		end,
+		isDir=function(path)
+			local a,b=pcall(fs.isDir,resolve(path))
+			if not a then error(b,1) end
+			return b
+		end,
+		isReadOnly=function(path)
+			local a,b=pcall(fs.isReadOnly,resolve(path))
+			if not a then error(b,1) end
+			return b
+		end,
+		getName=function(path)
+			local a,b=pcall(fs.getName,resolve(path))
+			if not a then error(b,1) end
+			return b
+		end,
+		getSize=function(path)
+			local a,b=pcall(fs.getSize,resolve(path))
+			if not a then error(b,1) end
+			return b
+		end,
+		getFreeSpace=function(path)
+			local a,b=pcall(fs.getFreeSpace,resolve(path))
+			if not a then error(b,1) end
+			return b
+		end,
+		move=function(path1,path2)
+			local a,b=pcall(fs.move,resolve(path1),resolve(path2))
+			if not a then error(b,1) end
+			return b
+		end,
+		copy=function(path1,path2)
+			local a,b=pcall(fs.copy,resolve(path1),resolve(path2))
+			if not a then error(b,1) end
+			return b
+		end,
+		combine=fs.combine,
+	},
+	term={
+		setCursorPos=function(a,b)
+			term.setCursorPos(a,math.min(2,b+1))
+		end,
+		getCursorPos=function()
+			local a,b=term.getCursorPos()
+			return a,b-1
+		end,
+	},
+	_G=sandbox,
+}
+for k,v in pairs(term) do
+	if not sandbox[k] then
+		sandbox.term[k]=v
+	end
+end
+for k,v in pairs(getfenv()) do
+	if not sandbox[k] then
+		sandbox[k]=v
+	end
+end
+for k,v in pairs(_G) do
+	if not sandbox[k] then
+		sandbox[k]=v
+	end
+end
+function sandboxit(func)
+	setfenv(func,sandbox)()
+end
+local err=false
+while cmenu do
+	a,b=pcall(cmenu)
+	if not a then
+		err=b
+		break
+	end
+end
+term.setBackgroundColor(colors.black)
+term.clear()
+term.setCursorPos(1,1)
+if err then
+	term.setTextColor(colors.orange)
+	print("Oh noes! Waterfox crashed")
+	print("Please report this to PixelToast!")
+	term.setTextColor(colors.red)
+	print(err)
+end

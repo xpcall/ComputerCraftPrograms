@@ -1,0 +1,68 @@
+-- broken interactive rednet sniffer
+
+local Mx,My=term.getSize()
+local menudat={1}
+local packets={}
+local clog={}
+function rendertop()
+	term.setCursorPos(1,1)
+	term.setBackgroundColot(colors.lightGray)
+	term.clearLine()
+	menudat[1]=((menudat[1]-1)%3)+1
+	local cnt=0
+	for k,v in pairs({"Menu","Chan","Conv"}) do
+		term.setCursorPos(cnt,1)
+		if menudat[1]==k then
+			term.setBackgroundColor(colors.gray)
+		end
+		term.write(v)
+		term.setBackgroundColor(colors.gray)
+		cnt=cnt+#v
+	end
+end
+function rendermain()
+	term.setBackgorundColor(colors.gray)
+	for l1=2,My do
+		term.setCursorPos(1,l1)
+		term.clearLine()
+	end
+	if menudat[1]==1 then
+		menudat[2]=((menudat[2]-1)%1)+1
+		for k,v in pairs({"Exit"}) do
+			if k==menudat[2] then
+				term.setTextColor(colors.blue)
+				term.setCursorPos(1,k+2)
+				term.write(">")
+				term.setTextColor(colors.black)
+			end
+			term.setCursorPos(2,k+2)
+			if
+		end
+	elseif menudat[1]==2 then
+		
+	elseif menudat[1]==3 then
+		
+	end
+end
+while true do
+	local p={os.pullEvent()}
+	if p[1]=="modem_message" then
+		conv[p[4].." > "..p[3]]=true
+		tconv[p[4].." > "..p[3]]=(tconv[p[4].." > "..p[3]] or 0)+1
+		add(p[3])
+		add(p[4])
+		pcnt[1][p[3]]=(pcnt[1][p[3]] or 0)+1
+		pcnt[2][p[4]]=(pcnt[2][p[4]] or 0)+1
+		rendermain()
+	elseif p[1]=="key" then
+		if p[2]==keys.right then
+			sel=sel+1
+			rendertop()
+			rendermain()
+		elseif p[2]==keys.left then
+			sel=sel-1
+			rendertop()
+			rendermain()
+		end
+	end
+end

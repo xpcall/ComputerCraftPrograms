@@ -1,0 +1,89 @@
+-- fs wrapper for syncing files, is missing functions
+
+for k,v in pairs(rs.getSides()) do
+	if peripheral.getType(v)=="modem" then
+		scon.open(v)
+	end
+end
+local function resolve(name)
+	return fs.combine("",name)
+end
+local shared={}
+local function isShared(folder)
+	folder=resolve(folder)
+	for k,v in pairs(shared) do
+		if string.sub(folder,1,#v[1]+1)==v.."/" then
+			return true
+		end
+	end
+	return false
+end
+if not fs.native then
+	if not fs.exists("ccraftbox/") then
+		fs.makeDir("ccraftbox")
+	end
+	local ofs=fs
+	local ocr=coroutine.yield
+	function coroutine.yield(...)
+		local p={ocr(...)}
+		if p[1]=="rednet_message" then
+			local dat=decode(p[3])
+			if type(dat)=="table" then
+				if dat[1]=="FILE" then
+					pr("message","success")
+					local file=ofs.open(fs.combine("ccraftbox",resolve(dat[2])),"w")
+					file.write(dat[3])
+					file.close()
+				elseif dat[1]=="MKDIR" then
+					ofs.makeDir(fs.combine("ccraftbox",resolve(dat[2])))
+				elseif dat[1]=="DEL" then
+					ofs.delete(fs.combine("ccraftbox",resolve(dat[2])))
+				end
+			else
+				pr("message","failure")
+			end
+		end
+		return unpack(p)
+	end
+	local cns={}
+	local rfs
+	rfs={
+		open=function(file,param)
+			local nfile=ofs.open(file,param)
+			pr("file","open",file)
+			local olcse=nfile.close
+			if nfile and param~="r" and isShared(file) then
+				nfile.close=function()
+					olcse()
+					pr("file","close",cns[nfile] or "unknown")
+					if cns[nfile] then
+						local file=fs.open(cns[nfile],"r")
+						send("FILE",string.sub(cns[nfile],11,-1),file.readAll())
+						cns[nfile]=nil
+					end
+					return nfile.close
+				end
+				cns[nfile]=file
+			end
+			return nfile
+		end,
+		makeDir=function(path)
+			local res=ofs.makeDir(path)
+			if isShared(path) then
+				send("MKDIR",string.sub(resolve(path),11,-1))
+			end
+			return res
+		end,
+		delete=function(file)
+			local res=ofs.delete(file)
+			if isShared(file) then
+				send("DEL",string.sub(resolve(file),11,-1))
+			end
+			return res
+		end,
+		native=ofs,
+	}
+	setmetatable(rfs,{__index=ofs})
+	fs=rfs
+end
+local tArgs={}

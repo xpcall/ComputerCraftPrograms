@@ -1,0 +1,132 @@
+-- one of my first programs, interfaces with datapi, and requires a nethost
+
+if not snet.open() then
+	print("Error: no modem detected")
+	error()
+end
+local function send(S)
+	host:send(id,S)
+	print("Returning: "..S)
+end
+shell.run("clear") 
+myid=os.getComputerID()
+if fs.exists("hostdata") then
+	local file=fs.open("hostdata","r")
+	d=infutil.decompress(file.readAll())
+	d=d or {}
+	if type(d[1])=="table" and type(d[2])=="table" then
+		print("Loaded data file.")
+		sData,sPass=unpack(d)
+	else
+		file:close()
+		print("Error loading data file.")
+		error()
+	end
+	file:close()
+else
+	sData={}
+	sPass={}
+end
+print("Hosting: "..myid)
+host=netapi.new()
+while true do
+	param=false
+	while param==false do
+		id,data=host:receive(1)
+		if data then
+			print(data)
+		end
+		if not data then
+			newtimer=true
+			fs.delete("hostdata")
+			file=io.open("hostdata","w")
+			file:write(infutil.compress(sData,sPass))
+			file:close()
+		else
+			param=infutil.decompress(data)
+		end
+	end
+	if param[1]=="datahost" and param[2]==myid then
+		table.remove(param,1)
+		table.remove(param,1)
+		if param[1]=="register" then
+			if sData[param[2]]==nil then
+				send("Registered.")
+				sPass[param[2]]=param[3]
+				sData[param[2]]={}
+				print(id.."|Registered new: "..param[2])
+			elseif sPass[param[2]]==param[3] then
+				send("Registered.")
+				print(id.."|Authorized: "..param[2])
+			else
+				send("Already exists.")
+				print(id.."|Access denied: "..param[2])
+			end
+		elseif param[1]=="delete" then
+			if sPass[param[2]]==param[3] then
+				send("Deleted.")
+				print(id.."|Deleted: "..param[2])
+				sPass[param[2]]=nil
+				sData[param[2]]=nil
+			else
+				send("Wrong name or password.")
+			end
+		elseif param[1]=="set" then
+			if sPass[param[2]]==param[3] then
+				if type(param[4])=="table" then
+					local out="d"
+					for k,v in pairs(param[4]) do
+						out=out.."["..infutil.serialize(v).."]"
+					end
+					local status,func=pcall(assert,loadstring(out.."=e return d"))
+					if status then
+						setfenv(func,{d=sData[param[2]], e=param[5]})
+						local status,res=pcall(func)
+						if status then
+							sData[param[2]]=res
+							send("Set.")
+							print(id.."|Modified "..param[2])
+						else
+							send(res)
+							print(id.."|Error: "..res)
+						end
+					else
+						send(func)
+						print(id.."|Error: "..func)
+					end
+				end
+			else
+				send("Wrong name or password.")
+				print(id.."|Access denied: "..param[2])
+			end
+		elseif param[1]=="get" then
+			if sPass[param[2]]==param[3] then
+				if type(param[4])=="table" then
+					local out="return d"
+					for k,v in pairs(param[4]) do
+						out=out.."["..infutil.serialize(v).."]"
+					end
+					local status1,func=pcall(assert,loadstring(out))
+					if status1 then
+						setfenv(func,{d=sData[param[2]],})
+						local status2,res=pcall(func)
+						if status2 then
+							res=res
+							send(infutil.compress(res))
+							print(id.."|Accesed: "..param[2])
+						else
+							send("Serialization error")
+							print(id.."|Error: "..res)
+						end
+					else
+						send(infutil.serialize(out))
+						print(id.."|Error: "..func)
+					end
+				end
+			else
+				send("Wrong name or password.")
+				print(id.."|Access denied: "..param[2])
+			end
+		end
+	end
+end

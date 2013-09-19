@@ -1,0 +1,27 @@
+-- pretty
+
+local hist={}
+local Mx,My=term.getSize()
+local tmax=0
+while true do
+	table.remove(hist,Mx)
+	if rs.getAnalogInput("back")>tmax then
+		tmax=rs.getAnalogInput("back")
+	end
+	table.insert(hist,1,rs.getAnalogInput("back"))
+	term.clear()
+	term.setCursorPos(1,My)
+	local last=0
+	for l1=1,math.min(Mx,#hist) do
+		term.setCursorPos(l1,(tmax-hist[l1])+1)
+		if hist[l1]>last then
+			term.write("/")
+		else
+			term.write("\\")
+		end
+		last=hist[l1]
+	end
+	while rs.getAnalogInput("back")==hist[1] do
+		os.pullEvent("redstone")
+	end
+end

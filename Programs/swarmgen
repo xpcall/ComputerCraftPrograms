@@ -1,0 +1,96 @@
+-- made a thread about it
+
+function savePrefs(name,data,tf) -- saves data to a file
+	local file=io.open(name,"w")
+	if tf then
+		file:write(data)
+	else
+		file:write(textutils.serialize(data))
+	end
+	file:close()
+end
+function readPrefs(name,tf) -- reads data from a file
+	local file=fs.open(name,"r")
+	if not file then return false end
+	local dat
+	if tf then
+		dat=file.readAll()
+	else
+		dat=textutils.unserialize(file.readAll())
+	end
+	file.close()
+	return dat
+end
+function split(T,func) -- splits a table
+	if func then
+		T=func(T) -- advanced function
+	end
+	local Out={}
+	if type(T)=="table" then
+		for k,v in pairs(T) do
+			Out[split(k)]=split(v) -- set the values for the new table
+		end
+	else
+		Out=T
+	end
+	return Out
+end
+local sides={"right","left","front","back","top","bottom"}
+do
+	local side
+	local sides={"right","left","front","back","top","bottom"}
+	for l1=1,6 do
+		if peripheral.getType(sides[l1])=="modem" then rednet.open(sides[l1]) side=sides[l1] end
+	end
+	if not side then
+		error("No modem attached.")
+	end
+end
+if not fs.exists("disk/cnt") then
+	turtle.select(3)
+	turtle.place()
+	turtle.select(2)
+	turtle.drop()
+	fs.copy(shell.getRunningProgram(),"disk/startup")
+	savePrefs("disk/cnt",{1,1,os.getComputerID()})
+	turtle.turnRight()
+	turtle.forward()
+	turtle.turnLeft()
+	turtle.up()
+	turtle.forward()
+	turtle.select(1)
+	for l1=1,64 do
+		while not turtle.placeDown() do end
+		peripheral.call("bottom","turnOn")
+		sleep(3)
+		if turtle.detectDown() then
+			pcall(peripheral.call,"bottom","reboot")
+			sleep(3)
+		end
+	end
+	sleep(20)
+	rednet.broadcast("READY")
+else
+	sleep(2)
+	local dat=readPrefs("disk/cnt")
+	odat=split(dat)
+	dat[1]=dat[1]+1
+	if dat[1]==9 then
+		dat[1]=1
+		dat[2]=dat[2]+1
+	end
+	savePrefs("disk/cnt",{dat[1],dat[2],dat[3]})
+	for l1=1,odat[1] do
+		while not turtle.forward() do end
+	end
+	for l1=1,odat[2]-1 do
+		while not turtle.up() do end
+	end
+	turtle.turnRight()
+	turtle.forward()
+	local id,data
+	while id~=dat[3] or data~="READY" do
+		id,data=rednet.receive()
+	end
+	
+end

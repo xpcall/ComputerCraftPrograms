@@ -1,0 +1,17 @@
+local rodSlots={12,11,13,17}
+local isoSlot=12
+local sNuke={}
+local nuke=peripheral.wrap("top")
+while true do
+	sleep(20)
+	sNuke.heat=nuke.getHeat()
+	sNuke.maxheat=nuke.getMaxHeat()
+	local sNuke.inv={}
+	for l1=0,nuke.getSizeInventory() do
+		local s=nuke.getStackInSlot(l1)
+		if s then
+			sNuke.inv[l1]={s.name,s.qty,s.dmg}
+		end
+	end
+	
+end

@@ -1,0 +1,18 @@
+-- me trying to break the encoding thing on mniip URL encoder thing
+
+local c="abcdefghijklmno"
+local out={}
+for m in c:gmatch(".") do
+	local r=http.get("http://178.219.36.155/0?t="..m.."a")
+	if r then
+		local sm=r.readAll():match("http://3000706203/(%d+)\"")
+		local o=m.."a:"
+		for match in sm:gmatch("..") do
+			local a=infutil.bcv(tonumber(match),"01")
+			o=o..string.rep("0",8-(#a))..a..":"
+		end
+		print(o)
+		out[m]=sm
+	end
+end
+infutil.savePrefs("dat",out)

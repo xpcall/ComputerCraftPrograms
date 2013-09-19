@@ -1,0 +1,185 @@
+-- my IRC bot
+
+local s=peripheral.wrap("left")
+local ac=peripheral.wrap("right")
+local c=s.socket_create("irc.esper.net",6667)
+local tArgs={...}
+local channel=""
+local special=string.char(0xc2)..string.char(0xa7)
+local function split(txt)
+	local tbl={}
+	for s in string.gmatch(txt,"[^ ]+") do
+		table.insert(tbl,s)
+	end
+	return tbl
+end
+local save=infutil.readPrefs("_irc") or {nick={},ban={}}
+local nick_irc=save.nick
+local irc_ban=save.ban
+snet.open()
+local function parse(txt)
+	if string.sub(txt,1,1)==":" then
+		local t1=string.find(txt," ")
+		local t2=string.find(txt," :")
+		local t3=string.find(txt,"!")
+		local name
+		if t3 then
+			name=string.sub(txt,2,t3-1)
+		else
+			name="*"
+		end
+		if t2 then
+			return {name,split(string.sub(txt,t1+1,t2-1)),string.sub(txt,t2+2)}
+		else
+			return {name,split(string.sub(txt,t1+1))}
+		end
+	else
+		local t=string.find(txt," ") or #txt+1
+		return {1,string.sub(txt,1,t-1),string.sub(txt,t+1)}
+	end
+end
+local lines={}
+local mode=0
+if peripheral.getType("right")=="terminal_glasses_bridge" then
+	ac.clear()
+	mode=1
+	for l1=1,10 do
+		lines[l1]=peripheral.call("right","addText",10,((l1-1)*9)+10,"",0xFFFFFF)
+	end
+end
+local function prt(txt)
+	if mode==0 then
+		for k,v in pairs(ac.getPlayerUsernames()) do
+			ac.getPlayerByName(v).sendChat(txt)
+		end
+	else
+		shell.run("clear")
+		for l1=1,9 do
+			lines[l1].setText(lines[l1+1].getText())
+			term.setCursorPos(1,l1)
+			term.write(lines[l1+1].getText())
+		end
+		lines[10].setText(txt)
+		term.setCursorPos(1,1)
+		term.write(txt)
+	end
+end
+local header=""
+local function snd(txt)
+	s.socket_write(c,txt)
+	print(txt:gsub("\n"," "))
+end
+function main()
+	s.socket_setAutoFlush(c,true)
+	s.socket_listen(c)
+	snd("NICK notpong\n")
+	snd("USER notpong irc.esper.net :NotPixelzOnToasts\n")
+	while true do
+		local p={os.pullEvent()}
+		if p[1]=="socket_line" then
+			rednet.broadcast(infutil.compress("irc_line",p[4]))
+			local dat=parse(p[4])
+			print(infutil.serialize(dat))
+			if dat[1]==1 and dat[2]=="PING" then
+				snd("PONG "..dat[3].."\n")
+			end
+			if (dat[2][1]=="PRIVMSG" or dat[1]=="*") and dat[3] then
+				local txt
+				if dat[1]=="MitchMC" then
+					if string.sub(dat[3],1,1)=="[" then
+						local u,t=dat[3]:match("%[(.+)%]")
+						txt=special.."3"..u..special.."f "..(t or "")
+					elseif string.sub(dat[3],1,1)=="*" then
+						local u,t=dat[3]:match("* (.+) (.+)")
+						txt=special.."3* "..u..special.."f "..t
+					elseif string.sub(dat[3],1,1)=="<" then
+						local u,t=dat[3]:match("<(.+)> (.+)")
+						txt="<"..special.."3"..u..special.."f>"..special.."f "..t
+					end
+				else
+					if string.sub(dat[3],1,8)==string.char(1).."ACTION " then
+						txt=special.."7* "..dat[1]..special.."f "..string.sub(dat[3],9,-2)
+					else
+						txt=special.."7<"..dat[1]..">"..special.."f "..dat[3]
+					end
+				end
+				if txt then
+					prt(txt)
+				end
+			elseif dat[2][1]=="JOIN" then
+				prt(special.."7"..dat[1].." Joined chat.")
+			elseif dat[2][1]=="QUIT" or dat[2][1]=="PART" then
+				if dat[3]~="" and dat[3] then
+					prt(special.."7"..dat[1].." Left chat. ("..dat[3]..")")
+				else
+					prt(special.."7"..dat[1].." Left chat.")
+				end
+			end
+		elseif p[1]=="chat_message" then
+			local px=string.sub(p[3],1,1)
+			if string.sub(p[3],1,7)=="@_VOICE" then
+				save.voice=string.sub(p[3],9)
+			elseif string.sub(p[3],1,8)=="@_HEADER" then
+				header=string.sub(p[3],10)
+			elseif p[3]=="@_QUIT" then
+				error("exit",0)
+			elseif string.sub(p[3],1,7)=="@_JOIN " then
+				if channel~="" then
+					snd("PART "..channel.."\n")
+				end
+				channel=string.sub(p[3],7)
+				snd("JOIN "..channel.."\n")
+			elseif string.sub(p[3],1,6)=="@_BAN " then
+				local h=split(p[3])
+				irc_ban[h[2]]=(h[3]=="1" or h[3]=="true")
+			elseif string.sub(p[3],1,8)=="@_PNICK " then
+				local h=split(p[3])
+				nick_irc[h[2]]=h[3]
+			elseif string.sub(p[3],1,8)=="@_IDENT " then
+				s.socket_write(c,"PRIVMSG NickServ :identify "..string.sub(p[3],9).."\n")
+			elseif px=="@" then
+				snd(string.sub(p[3],2).."\n")
+			elseif string.sub(p[3],1+#header,4)=="/me " and not irc_ban[p[2]] and string.sub(p[3],1,#header)==header then
+				p[3]=string.sub(p[3],5)
+				if p[2]==save.voice then
+					snd("PRIVMSG "..channel.." :"..string.char(1).."ACTION "..p[3]..string.char(1).."\n")
+				else
+					snd("PRIVMSG "..channel.." :"..p[2].." "..p[3].."\n")
+				end
+			elseif px~="/" and px~="!" and px~="\\" and px~="?" and px~="$" and not irc_ban[p[2]] then
+				if px==" " then
+					p[3]=p[3]:sub(2)
+				end
+				if p[2]==save.voice then
+					snd("PRIVMSG "..channel.." :"..p[3].."\n")
+				else
+					snd("PRIVMSG "..channel.." :<"..(nick_irc[p[2]] or p[2]).."> "..p[3].."\n")
+				end
+			end
+		elseif p[1]=="rednet_message" then
+			local a=infutil.decompress(p[3])
+			if a then
+				if a[1]=="irc_exec" and type(a[2])=="string" then
+					snd(a[2].."\n")
+				elseif a[1]=="irc_say" and type(a[2])=="string" then
+					for t in a[2]:gmatch("[^\n]+") do
+						snd("PRIVMSG "..channel.." :"..t.."\n")
+					end
+				end
+			end
+		end
+	end
+end
+a,b=pcall(main)
+if mode==1 then
+	ac.clear()
+end
+if b~="exit" then
+	print(b)
+	pcall(sleep,20)
+	local r=b:gsub(" ","_")
+	snd("PART "..channel.." :"..r.."\n")
+end
+snd("QUIT\n")
+s.socket_close(c)
+infutil.savePrefs("_irc",{nick=nick_irc,ban=irc_ban})

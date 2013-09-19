@@ -1,0 +1,23 @@
+-- right now it just calculates the relative worth of an item
+
+local item={
+	bank={
+		["Melon"]=12465,
+		["Diamond"]=64,
+		["Gold"]=250,
+		["Iron"]=425,
+	},
+}
+local gold={
+	pixel=130,
+}
+function rel(a,c,b)
+	local ca,cb=item.bank[a],item.bank[b]
+	local rw=0
+	for l1=1,c do
+		rw=rw+(cb/ca)
+		ca=ca-1
+		cb=cb+1
+	end
+	return rw
+end

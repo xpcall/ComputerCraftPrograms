@@ -1,0 +1,203 @@
+-- some exploit tool i made with mandrake
+
+term.clear()
+term.setCursorPos(1,1)
+snet.open()
+function STC(c)
+	if term.isColor() then
+		term.setTextColor(c)
+	end
+end
+function SBC(c)
+	if term.isColor() then
+		term.setBackgroundColor(c)
+	end
+end
+STC(colors.lime)
+print("HackShell v1.0")
+if fs.exists("/disk/") then
+	STC(colors.green)
+	print("Disk drive detected!")
+end
+local usage={
+	fs={
+		ls="<dir>",
+		cd="<dir>",
+	},
+	payloads={
+		purge="",
+		sramble="<gps/crashgps/firewolf>",
+	},
+	exit="",
+	cls="",
+	clear="",
+}
+local tHist={}
+local shmode=0
+
+-- 0: hack shell
+-- 1: normal shell
+-- 2: rednet interface
+
+local crdr="/"
+while not bExit do
+	if shmode==0 then
+		STC(colors.red)
+		write("$")
+		STC(colors.yellow)
+	elseif shmode==1 then
+		STC(colors.yellow)
+		write(shell.dir())
+		STC(colors.red)
+	end
+	write(">")
+	STC(colors.white)
+	local p=read(nil,tHist)
+	if p~=tHist[#tHist] then
+		table.insert(tHist,p)
+	end
+	local r = {}
+	for match in string.gmatch(p,"[^ \t]+") do
+		table.insert(r,match)
+	end
+	local pu=false
+	if shmode==1 then
+		if r[1]=="$" then
+			shmode=0
+		else
+			shell.run(unpack(r))
+		end
+	elseif shmode==0 then
+		if r[1]=="exit" then
+			break
+		elseif r[1]=="help" then
+			if r[2] then
+				
+			else
+				print("List of things:")
+				STC(colors.lime)
+				print("clear cls exec exit $ ls cd purge")
+			end
+		elseif r[1]=="cls" or r[1]=="clear" then
+			term.clear()
+			term.setCursorPos(1,1)
+			STC(colors.lime)
+			print("HackShell v1.0")
+		elseif r[1]=="exec" then
+			if r[2] then
+				local sPath = shell.resolveProgram(r[2])
+				if sPath then
+					shell.run(unpack(r,2))
+				else
+					STC(colors.orange)
+					print("No such program.")
+				end
+			else
+				pu=true
+			end
+		elseif r[1]=="$" then
+			shmode=1
+		elseif r[1]=="purge" then
+			for k,v in pairs(fs.list("/")) do
+				if not fs.isReadOnly(v) and v~="disk" then
+					STC(colors.orange)
+					write("Deleting file: ")
+					STC(colors.lime)
+					write(v)
+					if fs.isDir(v) then
+						write("/")
+					end
+					write("\n")
+					fs.delete(v)
+				end
+			end
+		elseif r[1]=="ls" then
+			local tArgs={unpack(r,2)}
+			local sDir=shell.dir()
+			if tArgs[1]~=nil then
+				sDir=shell.resolve(tArgs[1])
+			end
+			local tAll=fs.list(sDir)
+			local tFiles={}
+			local tDirs={}
+			for n,sItem in pairs(tAll) do
+				local sPath=fs.combine(sDir,sItem)
+				if fs.isDir(sPath) then
+					table.insert(tDirs,sItem)
+				else
+					table.insert(tFiles,sItem)
+				end
+			end
+			table.sort(tDirs)
+			table.sort(tFiles)
+			if term.isColour() then
+				textutils.pagedTabulate(colors.lime,tDirs,colours.white,tFiles)
+			else
+				textutils.pagedTabulate(tDirs,tFiles)
+			end
+		elseif r[1]=="cd" then		
+			local tArgs={unpack(r,2)}
+			if #tArgs<1 then
+				pu=true
+			else
+				local sNewDir=shell.resolve(table.concat(tArgs," "))
+				if fs.isDir(sNewDir) then
+					shell.setDir(sNewDir)
+				else
+					STC(colors.orange)
+					print("Not a directory")
+				end
+			end
+		elseif r[1]=="rin" then
+			if r[2] then
+			
+			else
+				pu=true
+			end
+		elseif r[1]=="scramble" then
+			if r[2]~="gps" and r[2]~="firewolf" and r[2]~="crashgps" then
+				pu=true
+			else
+				term.clear()
+				term.setCursorPos(1,1)
+				STC(colors.lime)
+				print("Mode: "..r[2])
+				STC(colors.green)
+				print("Press X to cancel")
+				if rednet.CHANNEL_BROADCAST then
+					rednet.CHANNEL_BROADCAST=65534
+				end
+				while true do
+					local p={os.pullEvent()}
+					if p[1]=="key" and p[2]==45 then
+						break
+					elseif p[1]=="rednet_message" then
+						if r[2]=="gps" then
+							if p[3]=="PING" then
+								rednet.send(p[2],"{"..math.random(-5000,5000)..","..math.random(-5000,5000)..","..math.random(-5000,5000).."}")
+								rednet.send(p[2],"{"..math.random(-5000,5000)..","..math.random(-5000,5000)..","..math.random(-5000,5000).."}")
+								rednet.send(p[2],"{"..math.random(-5000,5000)..","..math.random(-5000,5000)..","..math.random(-5000,5000).."}")
+							end
+							STC(colors.orange)
+							write("Sent false ping to ")
+							STC(colors.lime)
+							write(p[2])
+						end
+					end
+				end
+				os.pullEvent()
+				if rednet.CHANNEL_BROADCAST then
+					rednet.CHANNEL_BROADCAST=65535
+				end
+			end
+		else
+			STC(colors.orange)
+			print("Unknown command.")
+		end
+		if pu then
+			
+		end
+	end
+end
+term.clear()
+term.setCursorPos(1,1)

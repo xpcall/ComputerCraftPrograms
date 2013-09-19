@@ -1,0 +1,132 @@
+local func={
+	receive=function(self,timeout,sID)
+		local timer={}
+		if timeout then
+			timer=os.startTimer(timeout)
+		end
+		while true do
+			local tpe,id,data,dist=os.pullEvent()
+			local rData=infutil.decompress(data) or {}
+			if id==timer then
+				return nil,nil
+			elseif rData and id==self.host then
+				if rData[1]=="netclient" then
+					if rData[2]=="reqcon" and rData[4]==self.id then
+						rednet.send(self.host,infutil.compress("nethost",self.host,"gotcon",self.id,rData[3],rData[3]))
+					elseif rData[2]=="message" and (sID==nil or sID==rData[3]) and rData[6]==self.id then
+						rData[5]=rData[5]+dist
+						return rData[3],rData[4],rData[5]
+					end
+				end
+			end
+		end
+	end,
+	connect=function(self,id)
+		rednet.send(self.host,infutil.compress("nethost",self.host,"connect",id))
+		local timer = os.startTimer(1)
+		local data,data2
+		while true do
+			local e, p1, p2, p3 = os.pullEvent()
+			data2=infutil.decompress(p2) or {}
+			if e == "rednet_message" and p1 == self.host and data2[1]=="gotcon" then
+				data=p2
+				break
+			elseif e == "timer" and p1 == timer then
+				return false
+			end
+		end
+		if data2==false then
+			error("Error")
+		end
+		table.remove(data2[3])
+		table.insert(data2[3],1,data2[2])
+		self.cns[id]=infutil.rev(data2[3])
+		return true
+	end,
+	send=function(self,id,data,fdist)
+		fdist=fdist or 0
+		if not self.cns[id] then
+			if not self:connect(id) then
+				return false
+			end
+		end
+		rednet.send(self.host,infutil.compress("nethost",self.host,"send",self.cns[id],data,self.id,fdist))
+		return true
+	end,
+	addlink=function(self,pass)
+		rednet.send(self.host,infutil.compress("nethost",self.host,"addlink",pass,os.getComputerID()))
+	end,
+	remlink=function(self,pass)
+		rednet.send(self.host,infutil.compress("nethost",self.host,"remlink",pass,os.getComputerID()))
+	end,
+	convpull=function(self,tpe,id,data,dist)
+		local rData=infutil.decompress(data) or {}
+		if rData[1]=="netclient" then
+			if rData[2]=="reqcon" and rData[4]==self.id then
+				rednet.send(self.host,infutil.compress("nethost",self.host,"gotcon",self.id,rData[3],rData[3]))
+			elseif rData[2]=="message" and (sID==nil or sID==rData[3]) and rData[6]==self.id then
+				rData[5]=rData[5]+dist
+				return rData[3],rData[4],rData[5]
+			end
+		end
+		return nil
+	end
+}
+function hostsInRange(TF)
+	snet.open()
+	local hosts={}
+	local hosts2={}
+	rednet.broadcast(infutil.compress("nethost","ping"))
+	local sDist=-1
+	local timer=os.startTimer(0.1)
+	while true do
+		local tpe,id,data,dist=os.pullEvent()
+		if id==timer then
+			break
+		elseif data==infutil.compress("netclient","pong") and (dist<sDist or sDist==-1) then
+			hosts[id]=dist
+			table.insert(hosts2,{dist,id})
+		end
+	end
+	if TF then
+		table.sort(hosts2,function(a,b) return a[1]<b[1] end)
+		local out={}
+		for k,v in pairs(hosts2) do
+			out[k]=v[2]
+		end
+		return out
+	end
+	return hosts
+end
+function new(host)
+	snet.open()
+	if not host then
+		local ret=0
+		while true do
+			ret=ret+1
+			rednet.broadcast(infutil.compress("nethost","ping"))
+			local timer=os.startTimer(0.2)
+			while true do
+				local tpe,id,data,dist=os.pullEvent()
+				if id==timer then
+					break
+				elseif data==infutil.compress("netclient","pong") then
+					host=id
+					sDist=dist
+					break
+				end
+			end
+			if not host and ret>20 then
+				return false
+			elseif host then
+				break
+			end
+		end
+	end
+	local Out=infutil.split(func)
+	Out.host=host
+	Out.dist=0
+	Out.cns={}
+	Out.id=os.getComputerID()
+	return Out
+end

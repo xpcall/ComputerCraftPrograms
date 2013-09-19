@@ -1,0 +1,160 @@
+-- one of my first programs, used for networking (dont use it, this was before channels were insecure)
+
+shell.run("clear")
+snet.open()
+tLinks={}
+function savelinks()
+	file=io.open("netdata","w")
+	file:write(infutil.compress(sLinks,sPass))
+	file:close()
+	phst()
+end
+function phst()
+	tLinks={}
+	for k,v in pairs(sLinks) do
+		tLinks[v]=true
+	end
+end
+local function send(id,D)
+	rednet.send(id,D)
+	if id and D then
+		print("Sending "..id..": "..D)
+	end
+end
+if fs.exists("netdata") then
+	local file=fs.open("netdata","r")
+	d=infutil.decompress(file:readAll())
+	d=d or {}
+	if type(d[1])=="table" and type(d[2])=="string" then
+		print("Loaded data file.")
+		print('"'..d[2]..'"')
+		sLinks,sPass=d[1],d[2]
+		phst()
+	else
+		print("Error loading data file.")
+		error()
+	end
+	file:close()
+else
+	write("Password: ")
+	sPass=read()
+	print("Locating host...")
+	local cn=netapi.new()
+	if cn then
+		cn:addlink(sPass)
+		sLinks={cn.host}
+	else
+		sLinks={}
+	end
+	shell.run("clear")
+	fs.delete("netdata")
+	file=io.open("netdata","w")
+	file:write(infutil.compress(sLinks,sPass))
+	file:close()
+	sLinks={}
+end
+myid=os.getComputerID()
+print("Hosting: "..myid)
+while true do
+	param=false
+	while param==false do
+		id,data,dist=rednet.receive()
+		param=infutil.decompress(data)
+	end
+	print(data)
+	if param[1]=="nethost" and param[2]==myid then
+		table.remove(param,1)
+		table.remove(param,1)
+		param[5]=param[5] or {}
+		if param[1]=="connect" then
+			print(id.."| Connect")
+			param[4]=param[4] or {id}
+			table.insert(param[4],1,myid)
+			if type(param[2])=="string" then
+				for k,v in pairs(sLinks) do
+					send(v,infutil.compress("netclient","reqcon",param[4],param[2]))
+				end
+			else
+				send(param[2],infutil.compress("netclient","reqcon",param[4],param[2]))
+			end
+			param[3]=param[3] or {}
+			if #sLinks~=0 and param[3][myid]==nil then
+				param[3][myid]=true
+				for k,v in pairs(sLinks) do
+					send(v,infutil.compress("nethost",v,"connect",param[2],param[3],param[4]))
+				end
+			end
+		elseif param[1]=="setlink" then
+			if param[2]==sPass then
+				sLinks=param[3]
+				file=io.open("netdata","w")
+				file:write(infutil.compress(sLinks,sPass))
+				file:close()
+				phst()
+				send(id,"Set.")
+				print(id.."| Set link")
+			else
+				send(id,"Bad Password.")
+				print(id.."| Bad Password")
+			end
+		elseif param[1]=="addlink" then
+			if param[2]==sPass then
+				if not tLinks[id] then
+					table.insert(sLinks,param[3])
+					savelinks()
+				end
+				print(id.."| Added link")
+				send(id,"Set.")
+			else
+				send(id,"Bad Password.")
+				print(id.."| Bad Password")
+			end
+		elseif param[1]=="remlink" then
+			if param[2]==sPass then
+				sLinks={}
+				tLinks[param[3]]=nil
+				for k,v in pairs(tLinks) do
+					if not k==param[2] then
+						table.insert(sLinks,k)
+					end
+				end
+				print(id.."| Added link")
+				send(id,"Set.")
+			else
+				send(id,"Bad Password.")
+				print(id.."| Bad Password")
+			end
+		elseif param[1]=="gotcon" and (param[3] or {})[1]==myid then
+			table.remove(param[3],1)
+			if not tLinks[id] then
+				param[2]=id
+			end
+			if #param[3]==1 then
+				send(param[3][1],infutil.compress("gotcon",param[2],param[4]))
+			else
+				send(param[3][1],infutil.compress("nethost",param[3][1],"gotcon",param[2],param[3],param[4]))
+			end
+		elseif param[1]=="send" then
+			if not tLinks[id] then
+				param[4]=id
+				param[5]=0
+			end
+			print(id.."| sending")
+			table.remove(param[2],1)
+			param[5]=param[5]+dist
+			if #param[2]==1 then
+				if type(param[2][1])=="string" then
+					for k,v in pairs(sLinks) do
+						send(v,infutil.compress("netclient","message",param[4],param[3],param[5],param[2][1]))
+					end
+				else
+					send(param[2][1],infutil.compress("netclient","message",param[4],param[3],param[5],param[2][1]))
+				end
+			else
+				send(param[2][1],infutil.compress("nethost",param[2][1],"send",param[2],param[3],param[4],param[5]))
+			end
+		end
+	elseif param[1]=="nethost" and param[2]=="ping" then
+		send(id,infutil.compress("netclient","pong"))
+	end
+end

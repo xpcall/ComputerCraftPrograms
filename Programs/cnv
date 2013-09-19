@@ -1,0 +1,51 @@
+-- some shitty Python or Ruby program i converted into lua
+
+function merge_count_split(a, b)
+	c = {}
+	inv = 0
+	i=0
+	j=0
+	for k=1,((#a)+(#b)) do
+		if i < (#a) and j < (#b) then
+			if a[i+1] < b[j+1] then
+				table.insert(c,a[i+1])
+				i=i+1
+			elseif a[i+1] > b[j+1] then
+				table.insert(c,b[j+1])
+				inv=inv+((#a)-i)
+				j=j+1
+			end
+		elseif i == (#a) then
+			table.insert(c,b[j+1])
+			j=j+1
+		elseif j == (#b) then
+			table.insert(c,a[i+1])
+			i=i+1
+		end
+	end
+	return c, inv
+end
+function count_inv(data)
+	n=(#data)
+	if n == 1 then
+		return data, 0
+	end
+	local ndat1={}
+	for l1=1,math.floor(n/2) do
+		table.insert(ndat1,data[l1])
+	end
+	err, a, x = pcall(count_inv(ndat1))
+	local ndat2={}
+	for l1=math.floor(n/2),(#data) do
+		table.insert(ndat2,data[l1])
+	end
+	err, b, y = pcall(count_inv(ndat2))
+	c, z = merge_count_split(a,b)
+	return c, x + y + z
+end
+local file=fs.open("IntegerArray.txt","r")
+array={}
+for line in string.gmatch("^[ \n]+",file.readAll()) do
+	table.insert(array,tonumber(line))
+end
+print(count_inv(array)[1])

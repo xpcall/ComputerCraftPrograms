@@ -1,0 +1,64 @@
+local function send(pointer,data)
+	link[pointer].interlink:send(link[pointer].id,infutil.compress("datahost",link[pointer].id,unpack(data)))
+end
+local datalink={
+	__newindex=function(s,n,d)
+		local n2=infutil.split(link[s].parents)
+		table.insert(n2,n)
+		send(s,{"set",link[s].name,link[s].pass,n2,d})
+		local id,data=link[s].interlink:receive(1,link[s].id)
+		if data~="Set." then error(data or "Communication error") end
+	end,
+	__index=function(s,n)
+		local n2=infutil.split(link[s].parents)
+		table.insert(n2,n)
+		send(s,{"get",link[s].name,link[s].pass,n2})
+		local id,data=link[s].interlink:receive(1,link[s].id)
+		if data==nil or data=="Wrong name or password." then
+			error(data or "Communication error.")
+		end
+		local data=infutil.decompress(data)
+		if not data then
+			error("Unserialization error: "..data)
+		end
+		data=data[1]
+		if type(data)=="table" then
+			link[data]=infutil.split(link[s])
+			link[data].parents=n2
+			setmetatable(data,getmetatable(s))
+		end
+		return data
+	end
+}
+link={}
+function new(id,name,pass)
+	if not snet.open() then
+		error("Could not find modem.")
+	end
+	
+	local id,name,pass=tonumber(id),tostring(name),tostring(pass)
+	local new={}
+	link[new]={
+		id=id,
+		name=name,
+		pass=pass,
+		parents={},
+		childtable={},
+		interlink=netapi.new()
+	}
+	setmetatable(new,datalink)
+	send(new,{"register",name,pass})
+	local id,data=link[new].interlink:receive(1,id)
+	if data~="Registered." then error(data or "Communication error") end
+	return new
+end
+
+function purge(pointer)
+	send(pointer,{"delete",link[pointer].name,link[pointer].pass})
+end
+
+function raw(pointer)
+	send(pointer,{"get",link[pointer].name,link[pointer].pass,link[pointer].parents})
+	local id,data=link[pointer].interlink:receive(1,link[pointer].id)
+	return infutil.decompress(data)[1]
+end

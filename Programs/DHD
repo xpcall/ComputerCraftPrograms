@@ -1,0 +1,7 @@
+-- a DHD for stargates, too lazy to craft a real one
+local sg=peripheral.wrap("back")
+if sg.isConnected()=="true" then
+	sg.disconnect()
+else
+	sg.connect(read())
+end

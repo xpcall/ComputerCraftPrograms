@@ -1,0 +1,151 @@
+local function up()
+	while not turtle.up() do
+		turtle.digUp()
+	end
+end
+local function down()
+	while not turtle.down() do
+		turtle.digDown()
+	end
+end
+local function forward()
+	while not turtle.forward() do
+		turtle.dig()
+	end
+end
+local function right()
+	while not turtle.turnRight() do
+		sleep(0.5)
+	end
+end
+local function left()
+	while not turtle.turnLeft() do
+		sleep(0.5)
+	end
+end
+
+local tArgs = { ... }
+if #tArgs ~= 1 then
+	print( "Usage: tunnel <length>" )
+	return
+end
+
+-- Mine in a quarry pattern until we hit something we can't dig
+local length = tonumber( tArgs[1] )
+if length < 1 then
+	print( "Tunnel length must be positive" )
+	return
+end
+turtle.select(1)
+local depth = 0
+local collected = 0
+local rely = 0
+local relz = 0
+local rot = 0 -- 0:forward 1:right 2:back 3:left
+
+local function returns()
+	if rot==1 then
+		right()
+	elseif rot==3 then
+		left()
+	elseif rot==0 then
+		right()
+		right()
+	end
+	for l1=1,relz do
+		forward()
+	end
+	if rely==1 then
+		down()
+	end
+	for l1=16,1,-1 do
+		turtle.select(l1)
+		turtle.drop(64)
+	end
+		if rely==1 then
+		up()
+	end
+	right()
+	right()
+	for l1=1,relz do
+		while not forward() do
+			dig()
+		end
+	end
+	if rot==1 then
+		right()
+	elseif rot==3 then
+		left()
+	end
+end
+local function collect()
+	collected = collected + 1
+	if turtle.getItemCount(16)>0 then
+		returns()
+	end
+	if math.fmod(collected, 25) == 0 then
+		print( "Mined "..collected.." blocks." )
+	end
+end
+
+local function tryDig()
+	while turtle.dig() do
+		collect()
+		sleep(0.5)
+		if not turtle.detect() then
+			return true
+		end
+	end
+	return not turtle.detect()
+end
+
+local function tryDigUp()
+	while turtle.digUp() do
+		collect()
+		sleep(0.5)
+		if not turtle.detectUp() then
+			return true
+		end
+	end
+	return not turtle.detectUp()
+end
+
+print( "Tunnelling..." )
+
+for n=1,length do
+	tryDigUp()
+	left()
+	rot=3
+	tryDig()
+	up()
+	rely=1
+	tryDig()
+	right()
+	right()
+	rot=1
+	tryDig()
+	down()
+	rely=0
+	tryDig()
+	left()
+	rot=0
+	tryDig()
+	turtle.forward()
+	relz=relz+1
+end
+
+print( "Returning to start..." )
+
+-- Return to where we started
+right()
+right()
+for l1=1,relz do
+	forward()
+end
+for l1=1,16 do
+	turtle.select(l1)
+	turtle.drop()
+end
+
+print( "Tunnel complete." )
+print( "Mined "..collected.." blocks total." )

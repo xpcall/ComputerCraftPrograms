@@ -1,0 +1,42 @@
+-- prints tables out nicely
+
+local tbl={
+	derp={
+		herp=12,
+		herpp=1337,
+	},
+	herp={
+		herpp=13,
+	},
+}
+term.clear()
+local pending={}
+for k,v in pairs(tbl) do
+	table.insert(pending,{k,v})
+end
+local dat={}
+local l=1
+local h=1
+while pending[1] do
+	local d=pending[1]
+	table.remove(pending,1)
+	term.setCursorPos(l,h)
+	if type(d[2])=="table" then
+		l=l+1
+		dat[l]=infutil.rlen(d[2])+1
+		term.write(d[1]..":")
+		for k,v in pairs(d[2]) do
+			table.insert(pending,1,{k,v})
+		end
+	else
+		term.write(d[1]..": "..d[2])
+	end
+	h=h+1
+	if dat[l] then
+		dat[l]=dat[l]-1
+		if dat[l]==0 then
+			l=l-1
+		end
+	end
+end
+os.pullEvent("key")

@@ -1,0 +1,23 @@
+-- dumps all the globals, paste the result into np++s custom style thing
+
+local txt="\t\t\t"
+local cnt=0
+function addnewline()
+	if cnt%5==0 and cnt>0 then
+		txt=txt.."\n\t\t\t"
+	end
+	cnt=cnt+1
+end
+for k,v in pairs(_G) do
+	txt=txt..'"'..k..'",'
+	addnewline()
+	if type(v)=="table" then
+		for l,d in pairs(v) do
+			txt=txt..'"'..k..'.'..l..'",'
+			addnewline()
+		end
+	end
+end
+local file=io.open("file","w")
+file:write(txt)
+file:close()

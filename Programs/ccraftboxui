@@ -1,0 +1,183 @@
+local Mx,My=term.getSize()
+local Cx,Cy=math.floor(Mx/2),math.floor(My/2)
+local function cwrite(txt,line)
+	term.setCursorPos(Cx-math.floor(#txt/2),line or Cy)
+	term.write(txt)
+end
+local r={}
+local settings={con={},shared={}}
+if not fs.exists(".craftboxui/") then
+	fs.makeDir(".craftboxui/")
+	infutil.savePrefs(".craftboxui/settings",settings)
+end
+settings=infutil.readPrefs(".craftboxui/settings")
+function r.top(b,title)
+	term.setBackgroundColor(colors.gray)
+	term.clear()
+	term.setCursorPos(1,1)
+	term.setBackgroundColor(colors.lightBlue)
+	term.clearLine()
+	term.setTextColor(colors.black)
+	cwrite("CCraftBox",1)
+	term.setCursorPos(Mx-1,1)
+	term.setBackgroundColor(colors.red)
+	term.write(" "..(b or "x"))
+	term.setBackgroundColor(colors.lightGray)
+	term.setTextColor(colors.gray)
+	term.setCursorPos(2,2)
+	term.clearLine()
+	term.write(title)
+end
+function r.main()
+	term.setCursorPos(2,4)
+	term.setBackgroundColor(colors.gray)
+	term.setTextColor(colors.lightBlue)
+	term.write("[Share Folder]")
+	term.setCursorPos(2,6)
+	term.write("[Items Shared]")
+	term.setCursorPos(2,8)
+	term.write("[Connections]")
+end
+function r.share(txt)
+	r.top("<","Share Folder")
+	term.setCursorPos(2,4)
+	term.setBackgroundColor(colors.gray)
+	term.setTextColor(colors.lightBlue)
+	term.write(txt)
+	term.setTextColor(colors.lightGray)
+	term.setCursorPos(2,5)
+	term.clearLine()
+end
+r.list_scr=0
+function r.list(tpe)
+	local con
+	if tpe==1 then
+		con=settings.shared
+	elseif tpe==2 then
+		con=settings.con
+	end
+	term.setBackgroundColor(colors.gray)
+	term.setTextColor(colors.lightBlue)
+	r.shared_scr=r.list_scr%math.max(#con-(My-5),0)
+	if math.max(#con-(My-4),0)==0 then
+		r.list_scr=0
+	end
+	if #con==0 then
+		term.setCursorPos(2,4)
+		term.setTextColor(colors.lightBlue)
+		term.setBackgroundColor(colors.gray)
+		term.write("Nothing to see here.")
+	else
+		for l1=3,My-1 do
+			local d=con[l1-3+r.list_scr]
+			if d then
+				term.setCursorPos(2,l1)
+				term.clearLine()
+				term.setTextColor(colors.gray)
+				term.setBackgroundColor(colors.lightGray)
+				term.write(" x")
+				term.setTextColor(colors.lightBlue)
+				term.setBackgroundColor(colors.gray)
+				term.write(d[1])
+			else
+				term.setCursorPos(2,l1)
+				term.setBackgroundColor(colors.gray)
+				term.clearLine()
+			end
+		end
+	end
+end
+r.top(nil,"Main Menu")
+r.main()
+local c="main"
+while true do
+	local p={os.pullEvent()}
+	if c=="main" then
+		if p[1]=="mouse_click" then
+			if p[3]>=Mx-1 and p[4]==1 then
+				break
+			elseif p[3]>=2 and p[3]<=15 and p[4]==4 then
+				r.share("Directory:")
+				local oldpull=os.pullEvent
+				function os.pullEvent(...)
+					local p={oldpull(...)}
+					if p[1]=="mouse_click" then
+						if p[3]>=Mx-1 and p[4]==1 then
+							error()
+						end
+					end
+					return unpack(p)
+				end
+				local a,fold=pcall(read)
+				local pass
+				if fold~="" and fold~=nil then
+					r.share("Password:")
+					a,pass=pcall(read)
+				end
+				os.pullEvent=oldpull
+				if pass~="" and pass~=nil then
+					table.insert(settings.shared,1,{fold,pass})
+				end
+				term.setCursorBlink(false)
+				r.top(nil,"Main Menu")
+				r.main()
+			elseif p[3]>=2 and p[3]<=15 and p[4]==6 then
+				r.top("<","Items Shared")
+				r.list(1)
+				r.list_scr=0
+				while true do
+					local p={os.pullEvent()}
+					if p[1]=="mouse_click" then
+						if p[3]>=Mx-1 and p[4]==1 then
+							break
+						elseif p[3]>=2 and p[3]<=3 and p[4]>=3 and p[4]<=My-1 and settings.shared[p[4]-3+r.list_scr] then
+							table.remove(settings.shared,p[4]-3+r.list_scr)
+							r.list_scr=math.max(r.list_scr-1,0)
+							r.list(1)
+						end
+					elseif p[1]=="key" then
+						if p[2]==keys.up then
+							r.list_scr=r.list_scr-1
+							r.list(1)
+						elseif p[2]==keys.down then
+							r.list_scr=r.list_scr+1
+							r.list(1)
+						end
+					end
+				end
+				r.top(nil,"Main Menu")
+				r.main()
+			elseif p[3]>=2 and p[3]<=14 and p[4]==8 then
+				r.top("<","Connections")
+				r.list(2)
+				r.list_scr=0
+				while true do
+					local p={os.pullEvent()}
+					if p[1]=="mouse_click" then
+						if p[3]>=Mx-1 and p[4]==1 then
+							break
+						elseif p[3]>=2 and p[3]<=3 and p[4]>=3 and p[4]<=My-1 and settings.shared[p[4]-3+r.list_scr] then
+							table.remove(settings.shared,p[4]-3+r.list_scr)
+							r.list_scr=math.max(r.list_scr-1,0)
+							r.list(2)
+						end
+					elseif p[1]=="key" then
+						if p[2]==keys.up then
+							r.list_scr=r.list_scr-1
+							r.list(2)
+						elseif p[2]==keys.down then
+							r.list_scr=r.list_scr+1
+							r.list(2)
+						end
+					end
+				end
+				r.top(nil,"Main Menu")
+				r.main()
+			end
+		end
+	end
+end
+infutil.savePrefs(".craftboxui/settings",settings)
+term.setBackgroundColor(colors.black)
+term.setCursorPos(1,1)
+term.clear()

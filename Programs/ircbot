@@ -1,0 +1,28 @@
+-- making a new IRC bot, will be remaking this to use httpnet
+
+local wi=infutil.wrap("webinterface")
+local am=infutil.wrap("adventure map interface")
+local s=wi.socket_create("localhost",25566)
+wi.socket_listen(s)
+wi.socket_setAutoFlush(s,true)
+local routine
+local ev=setmetatable({wi=wi,am=am,s=s},{__index=_G})
+routine=eroutine.add(
+	function(...)
+		local p={...}
+		if p[1]=="socket_line" and p[3]==s then
+			print(p[4])
+			local a=infutil.decompress(p[4])
+			if a then
+				if a[1]=="exec" then
+					local a,b=pcall(loadstring())
+				elseif a[1]=="chat" then
+					if a[3] then
+						am.getPlayerByName(a[3]):sendChat()
+					end
+					for k,v in pairs(am.)
+				end
+			end
+		end
+	end
+)

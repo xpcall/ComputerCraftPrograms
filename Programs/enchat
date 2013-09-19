@@ -1,0 +1,147 @@
+-- a chat program that uses scon
+
+local tArgs={...}
+write("Name> ")
+local name=read()
+write("Pass> ")
+local pass=read()
+local a=scon.new()
+function a.onRequest(id)
+	a:auth(id,pass)
+end
+print("ID: "..a.id)
+a:open()
+if tonumber(tArgs[1]) then
+	a:connect(tonumber(tArgs[1]),pass)
+end
+local c=true
+local rID
+function a.onClientAuth(id)
+	c=false
+	rID=id
+end
+a.onServerAuth=a.onClientAuth
+while c do
+	a:decode(os.pullEvent())
+end
+local chatlog={}
+local Mx,My=term.getSize()
+term.clear()
+term.setCursorBlink(true)
+local sLine = ""
+local nPos = 0
+local w,h=term.getSize()
+local sx, sy = 1,My
+local nScroll = 0
+local nHistoryPos = nil
+local _tHistory={}
+if sx + nPos >= w then
+	nScroll = (sx + nPos) - w
+end	
+term.setCursorPos( sx + nPos - nScroll, sy )
+local function redraw( _sCustomReplaceChar )
+	local nScroll = 0
+	if sx + nPos >= w then
+		nScroll = (sx + nPos) - w
+	end		
+	term.setCursorPos( sx, sy )
+	local sReplace = _sCustomReplaceChar or _sReplaceChar
+	term.write( string.sub( sLine, nScroll + 1 ) )
+	term.setCursorPos( sx + nPos - nScroll, sy )
+end
+local function renderchat()
+	local cnt=0
+	for l1=math.max(1,#chatlog-(My-2)),#chatlog do
+		cnt=cnt+1
+		term.setCursorPos(1,cnt)
+		term.clearLine()
+		term.write(chatlog[l1])
+	end
+	local nScroll = 0
+	if sx + nPos >= w then
+		nScroll = (sx + nPos) - w
+	end	
+	term.setCursorPos( sx + nPos - nScroll, sy )
+end
+while true do
+	local p={os.pullEvent()}
+	local sID,sData=a:decode(unpack(p))
+	if sID==rID then
+		table.insert(chatlog,sData[1])
+		renderchat()
+	end
+	local sEvent, param = unpack(p)
+	if sEvent == "char" then
+		sLine = string.sub( sLine, 1, nPos ) .. param .. string.sub( sLine, nPos + 1 )
+		nPos = nPos + 1
+		redraw()
+	elseif sEvent == "key" then
+		if param == keys.enter and #sLine>0 then
+			local tLine="<"..name.."> "..sLine
+			a:send(rID,tLine)
+			table.insert(chatlog,tLine)
+			table.insert(_tHistory,1,sLine)
+			sLine=""
+			nPos=0
+			renderchat()
+			term.clearLine()
+			nHistoryPos=nil
+		elseif param == keys.left then
+			if nPos > 0 then
+				nPos = nPos - 1
+				redraw()
+			end
+			elseif param == keys.right then
+				if nPos < string.len(sLine) then
+					nPos = nPos + 1
+					redraw()
+				end
+			elseif param == keys.up or param == keys.down then
+				if _tHistory then
+					term.clearLine()
+					if param == keys.up then
+						if nHistoryPos == nil then
+							if #_tHistory > 0 then
+								nHistoryPos = #_tHistory
+							end
+						elseif nHistoryPos > 1 then
+							nHistoryPos = nHistoryPos - 1
+						end
+					else
+						if nHistoryPos == #_tHistory then
+							nHistoryPos = nil
+						elseif nHistoryPos ~= nil then
+							nHistoryPos = nHistoryPos + 1
+						end						
+					end
+					if nHistoryPos then
+						sLine = _tHistory[nHistoryPos]
+						nPos = string.len( sLine ) 
+					else
+						sLine = ""
+						nPos = 0
+					end
+					redraw()
+				end
+		elseif param == keys.backspace then
+			if nPos > 0 then
+				term.clearLine()
+				sLine = string.sub( sLine, 1, nPos - 1 ) .. string.sub( sLine, nPos + 1 )
+				nPos = nPos - 1					
+				redraw()
+			end
+		elseif param == keys.home then
+			nPos = 0
+			redraw()		
+		elseif param == keys.delete then
+			if nPos < string.len(sLine) then
+				term.clearLine()
+				sLine = string.sub( sLine, 1, nPos ) .. string.sub( sLine, nPos + 2 )				
+				redraw()
+			end
+		elseif param == keys["end"] then
+			nPos = string.len(sLine)
+			redraw()
+		end
+	end
+end

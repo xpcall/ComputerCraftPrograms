@@ -1,0 +1,84 @@
+-- i dont fucking know, maby a chanel system of some sort? as you can see, its ancient
+
+-- BY INFINIKILLER64 (abc on computercraft.info)
+-- feel free to use with credit
+-- you can use the open,close,and convert functions without credit though
+
+sides={"right","left","front","back","top","bottom"}
+function open()
+	for l1=1,6 do
+		if peripheral.getType(sides[l1])=="modem" then rednet.open(sides[l1]) return true,sides[l1] end
+	end
+	return false
+end
+function close()
+	local l1
+	for l1=1,6 do
+		local first=rednet.isOpen(sides[l1])
+		rednet.close(sides[l1])
+		if first ~= rednet.isOpen(sides[l1]) then return true,sides[l1] end
+	end
+	return false
+end
+function send( ... )
+	local tArgs={ ... }
+	if #tArgs>3 or #tArgs<2 then
+		error("USAGE: snet.send(id,data[,channel])")
+	end
+	tArgs[3]=tArgs[3] or ""
+	if tArgs[1]==-1 then tArgs[1]=nil end
+	return rednet.send(tArgs[1],tostring(tArgs[3]:len()).."."..tArgs[3].."."..tArgs[2])
+end
+function broadcast( ... )
+	local tArgs={ ... }
+	if #tArgs>2 or #tArgs<1 then
+		error("USAGE: snet.broadcast(data[,channel])")
+	end
+	return snet.send(-1,tArgs[1],tArgs[2])
+end
+function convert(p2)
+	local data=string.find(p2,"%.")
+	if data == nil then return end
+	local data2=tonumber(string.sub(p2,1,data-1))
+	if data == nil then return end
+	local data3=string.sub(p2,data+1,data2+data)
+	if string.sub(p2,data2+data+1,data2+data+1)~="." then return end
+	return string.sub(p2,data2+data+2),data3
+end
+function receive( ... )
+	local tArgs={ ... }
+	local erro=false
+	local eArgs={}
+	if type(tArgs[1]) == "number" then
+		eArgs[1]=tArgs[1]
+	elseif type(tArgs[1]) == "string" then
+		eArgs[2]=tArgs[1]
+	else
+		erro=true
+	end
+	if type(tArgs[1]) == "string" then
+		eArgs[2]=tArgs[1]
+	else
+		erro=true 
+	end
+	if #tArgs==0 then erro=false end
+	if erro then
+		error("USAGE: id,data=snet.receive([timeout][,channel])")
+	end
+	if eArgs[1]~=nil then
+		local timer = os.startTimer(eArgs[1])
+	end
+	local data, tye, p1, p2, p3
+	while true do
+		while true do
+			tye, p1, p2, p3 = os.pullEvent()
+			if tye == "rednet_message" or ( tye == "timer" and p1 == timer ) then
+				break
+			end
+		end
+		if typeo == "timer" then return nil,nil end
+		data,tag=convert(p2)
+		if data and tag==(eArgs[2] or "") then break end
+	end
+	return p1,data
+end

@@ -1,0 +1,142 @@
+-- chat logger for monitors, still a WIP
+
+-- created by PixelToast
+local chatlog=infutil.readPrefs("log") or {}
+local mon
+for v in peripheral.getNames() do
+	if peripheral.getType(v)=="monitor" then
+		mon=peripheral.wrap(v)
+		mon.setTextScale(1)
+		term.redirect(mon)
+		break
+	end
+end
+local nicks={
+	
+}
+local color={
+	["*"]=colors.black,
+	PixelToast=colors.red,
+	Leo_Verto=colors.orange,
+	jojomocool=colors.green,
+	Stary2001=colors.orange,
+	wolfmitchell=colors.orange,
+}
+term.clear()
+term.setCursorPos(1,1)
+local Mx,My=term.getSize()
+local smax=0
+local function renderchat()
+	for l1=math.max(1,#chatlog-(My-1)),#chatlog do
+		if #chatlog[l1][1]>smax then
+			smax=#chatlog[l1][1]
+		end
+	end
+	local cnt=1
+	--local l1=math.max(1,#chatlog-(My-1))
+	local l1=math.max(My,#chatlog)-(My-1)
+	while l1<=#chatlog and cnt<=My do
+		term.setCursorPos(1,cnt)
+		term.setBackgroundColor(colors.black)
+		term.clearLine()
+		term.setBackgroundColor(colors.gray)
+		term.setTextColor(color[chatlog[l1][1]] or colors.black)
+		term.write(string.rep(" ",math.max(smax-#chatlog[l1][1],0))..chatlog[l1][1])
+		term.setBackgroundColor(colors.black)
+		term.setTextColor(colors.lightGray)
+		if chatlog[l1][1]=="*" then
+			term.setTextColor(colors.gray)
+		else
+			term.setTextColor(colors.white)
+		end
+		term.setCursorPos(smax+2,cnt)
+		term.write(chatlog[l1][2])
+		--[[
+		local text=chatlog[l1][2]
+		local pad=false
+		while #text>0 do
+			if pad then
+				term.setCursorPos(1,cnt)
+				term.clearLine()
+				term.setBackgroundColor(colors.gray)
+				term.write(string.rep(" ",smax))
+				term.setBackgroundColor(colors.black)
+			end
+			term.setCursorPos(smax+2,cnt)
+			term.write(text)
+			text=string.sub(text,Mx-(smax+2))
+			cnt=cnt+1
+			pad=true
+		end]]
+		l1=l1+1
+		cnt=cnt+1
+	end
+	for l1=l1,My do
+		term.setCursorPos(1,l1)
+		term.setBackgroundColor(colors.gray)
+		term.write(string.rep(" ",smax))
+	end
+end
+local function process(player,text)
+	table.insert(chatlog,{player,text})
+	infutil.savePrefs("log",chatlog)
+	--[[
+	local list={}
+	local cin=1
+	local cx=smax+1
+	local nLinesPrinted=0
+	while string.len(text)>0 do
+		local whitespace = string.match(text,"^[ \t]+")
+		if whitespace then
+			list[cin]=(list[cin] or "")..whitespace
+			cx=#list[cin]+smax+1
+			sText=string.sub(text, string.len(whitespace)+1)
+		end
+		local newline=string.match(text,"^\n")
+		if newline then
+			cin=cin+1
+			text=string.sub(text,2)
+		end
+		local sText=string.match(text,"^[^ \t\n]+")
+		if sText then
+			text=string.sub(text,string.len(sText)+1)
+			if string.len(sText)+smax+1>Mx then			
+				while string.len(sText)>0 do
+					if x>w then
+						cin=cin+1
+					end
+					list[cin]=(list[cin] or "")..sText
+					cx=#list[cin]+smax+1
+					sText=string.sub(sText,(w-x)+2)
+				end
+			else
+				if cx+string.len(text)-1>My then
+					cin=cin+1
+				end
+			end
+		end
+	end
+	infutil.savePrefs("log",chatlog)
+	renderchat()
+	]]
+end
+renderchat()
+while true do
+	local p={os.pullEventRaw()}
+	if (p[1]=="chat_message" or p[1]=="chat") and string.sub(p[3],1,1)~="/" and string.sub(p[3],1,1)~="!" then
+		table.insert(chatlog,{nicks[p[2]] or p[2],p[3]})
+		infutil.savePrefs("log",chatlog)
+		renderchat()
+	elseif p[1]=="player_login" then
+		table.insert(chatlog,{"*",p[2].." joined the game."})
+		infutil.savePrefs("log",chatlog)
+		renderchat()
+	elseif p[1]=="player_logout" then
+		table.insert(chatlog,{"*",p[2].." left the game."})
+		infutil.savePrefs("log",chatlog)
+		renderchat()
+	elseif p[1]=="terminate" then
+		break
+	end
+end
+term.restore()

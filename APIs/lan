@@ -1,0 +1,48 @@
+function wrap(side,func)
+	local m=peripheral.wrap(side)
+	setfenv(func,setmetatable({
+		rednet={
+			send=function(id,msg)
+				m.sendChannel(-id,msg)
+			end,
+			broadcast=function(msg)
+				m.sendChannel(1,msg)
+			end,
+			receive=rednet.receive,
+			open=function() end,
+		},
+		peripheral={
+			getSides=peripheral.getSides,
+			call=peripheral.call,
+			getMethods=peripheral.getMethods,
+			getType=peripheral.getType,
+			isPresent=peripheral.isPresent,
+			decode=peripheral.decode,
+			wrap=peripheral.wrap,
+			native=peripheral,
+		},
+	},{__index=getfenv(func)}))
+	local main=coroutine.create(func)
+    local tFilter,p=nil,{}
+    while true do
+    	if tFilter == nil or tFilter == p[1] or p[1] == "terminate" then
+	    	local ok,param=coroutine.resume(main,unpack(p))
+			if not ok then
+				error(param)
+			else
+				tFilter=param
+			end
+			if coroutine.status(main) == "dead" then
+				return
+			end
+		end
+		if coroutine.status(main) == "dead" then
+			return
+		end
+		p={os.pullEventRaw()}
+		if p[1]=="lan_message" and p[2]==side then
+			p={"rednet_message",p[3],p[5],0}
+		end
+	end
+end
+

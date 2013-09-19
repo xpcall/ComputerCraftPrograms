@@ -1,0 +1,41 @@
+local function cipher(sMessage,state)
+	local nCount=#sMessage
+	local K={}
+	for i=1,nCount do
+		state.i= (state.i+1)%256
+		state.j=(state.j+state.schedule[state.i-1])%256
+		local t=state.schedule[state.i]
+		state.schedule[state.i]=state.schedule[state.j]
+		state.schedule[state.j]=t
+		K[#K+1]=state.schedule[(state.schedule[state.i-1]+state.schedule[state.j-1]-1)%256]
+	end
+	local sOutput=""
+	for i=1,nCount do
+		sOutput=sOutput..string.char(bit.bxor(K[i],string.byte(sMessage,i)))
+	end
+	return sOutput
+end
+
+function new(sKey)
+	local nKeyLength=string.len(sKey)
+	local tKey={string.byte(sKey,1,nKeyLength)}
+	local tSch={}
+	for i=0,255 do
+		tSch[i]=i
+	end
+	local j=0
+	for i=0,255 do
+		j=(j+tSch[i]+tKey[(i%nKeyLength)+1])%256
+		local t=tSch[i]
+		tSch[i]=tSch[j]
+		tSch[j]=t
+	end
+	local state={
+		i=0,
+		j=0,
+		schedule=tSch
+	}
+	return function(sMessage)
+		return cipher(sMessage,state)
+	end
+end

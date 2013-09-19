@@ -1,0 +1,203 @@
+-- some broken uber obufuscated assembly
+
+st={["true"]=true,["false"]=false,["nil"]=nil,}
+setmetatable(st,{__index=_G})
+local pstk={}
+local fstk={}
+local ip=0
+function lookup(be,str,tbl)
+	for k,v in pairs(tbl or _G) do
+		if (string.sub(k,1,#str)==str and be==1) or (string.sub(k,-(#str))==str and be==2) then
+			return k
+		end
+	end
+	if tbl==st then
+		for k,v in pairs(_G) do
+			if (string.sub(k,1,#str)==str and be==1) or (string.sub(k,-(#str))==str and be==2) then
+				return k
+			end
+		end
+	end
+end
+function argsproc(tbl,tpe,stbl)
+	if tbl[1]=="be" then
+		return (stbl or st)[lookup(tbl[2],tbl[3],(stbl or st))]
+	elseif (tbl[1]=="s" or tbl[1]=="raw" or tbl[1]=="n") and tpe==1 then
+		return (stbl or st)[tbl[2]] or tbl[2]
+	elseif tbl[1]=="raw" and tpe==3 then
+		return st[tbl[2]] or tbl[2]
+	elseif tbl[1]=="s" then
+		return tbl[2]
+	elseif tbl[1]=="raw" and tonumber(tbl[2]) then
+		return tonumber(tbl[2])
+	elseif tbl[1]=="raw" and tpe==2 then
+		return tbl[2]
+	elseif tbl[1]=="raw" then
+		return st[tbl[2]] or tbl[2]
+	elseif tbl[1]=="st" then
+		return pstk[tbl[2]]
+	elseif tbl[1]=="n" then
+		return tbl[2]
+	end
+end
+local function argsraw(tbl)
+	local out={}
+	for k,v in pairs(tbl) do
+		table.insert(out,argsproc(v))
+	end
+	return out
+end
+function save(tbl,val)
+	if tbl[1]=="st" then
+		pstk[tbl[2]]=val
+	elseif tbl[1]=="raw" and tonumber(tbl[2]) then
+		st[tbl[2]]=tonumber(tbl[2])
+	elseif tbl[1]=="raw" or tbl[1]=="s" then
+		st[tbl[2]]=val
+	end
+end
+local trx={si=4,jp=2,cs=2,rt=1,ia=2,sd=4,pu=2,po=1,cp=4}
+local prg={}
+function asm(txt)
+	local pr={}
+	txt=txt.." "
+	while #txt>1 do
+		if string.sub(txt,1,3)=="es:" then
+			txt=string.sub(txt,4)..""
+			table.insert(pr,{"be",2,string.sub(txt,1,string.find(txt,":")-1)})
+			txt=string.sub(txt,string.find(txt,":")+2)
+		elseif string.sub(txt,1,3)=="bs:" then
+			txt=string.sub(txt,4)..""
+			table.insert(pr,{"be",1,string.sub(txt,1,string.find(txt,":")-1)})
+			txt=string.sub(txt,string.find(txt,":")+2)
+		elseif string.sub(txt,1,2)=="s:" then
+			txt=string.sub(txt,3)..""
+			table.insert(pr,{"s",string.sub(txt,string.find(txt,":")+1,1+string.find(txt,":")+tonumber(string.sub(txt,1,string.find(txt,":")-1)))})
+			txt=string.sub(txt,2+string.find(txt,":")+tonumber(string.sub(txt,1,string.find(txt,":")-1)))
+		elseif string.sub(txt,1,3)=="ss:" then
+			txt=string.sub(txt,4)..""
+			table.insert(pr,{"s",string.sub(txt,1,string.find(txt,":")-1)})
+			txt=string.sub(txt,string.find(txt,":")+2)
+		elseif string.sub(txt,1,3)=="st:" then
+			txt=string.sub(txt,4)..""
+			table.insert(pr,{"st",tonumber(string.sub(txt,1,string.find(txt," ")-1))})
+			txt=string.sub(txt,string.find(txt," ")+1)
+		elseif string.sub(txt,1,2)=="n:" then
+			txt=string.sub(txt,3)..""
+			table.insert(pr,{"n",tonumber(string.sub(txt,1,string.find(txt," ")-1))})
+			txt=string.sub(txt,string.find(txt," ")+1)
+		else
+			table.insert(pr,{"raw",string.sub(txt,1,string.find(txt..""," ")-1)})
+			txt=string.sub(txt,string.find(txt..""," ")+1)
+		end
+	end
+	pr[1]=argsproc(pr[1])
+	if pr[1]=="cg" then
+		st.arg={argsproc(pr[2],1)(unpack(argsraw({unpack(pr,3)})))}
+	elseif pr[1]=="cl" then
+		st.arg={argsproc(pr[2],1)(unpack(argsraw({unpack(pr,3)})))}
+	elseif pr[1]=="st" then
+		if pr[4] then
+			save(pr[2],argsproc(pr[4],1,st[argsproc(pr[3],1)]))
+		else
+			save(pr[2],argsproc(pr[3],3))
+		end
+	elseif pr[1]=="si" then
+		argsproc(pr[2])[argsproc(pr[3])]=argsproc(pr[4])
+	elseif pr[1]=="jp" then
+		if argsproc(pr[3])==true then
+			ip=tonumber(argsproc(pr[2]))-1
+		end
+	elseif pr[1]=="cs" then
+		table.insert(fstk,a,ip+1)
+		ip=tonumber(argsraw({pr[2]})[1])
+	elseif pr[1]=="rt" then
+		ip=fstk[1]
+		table.remove(fstk,1)
+	elseif pr[1]=="ia" then
+		save(pr[2],{})
+	elseif pr[1]=="sd" then
+		if pr[2][2]=="add" then
+			save(pr[3],argsproc(pr[3])+argsproc(pr[4]))
+		elseif pr[2][2]=="sub" then
+			save(pr[3],argsproc(pr[3])-argsproc(pr[4]))
+		elseif pr[2][2]=="mlt" then
+			save(pr[3],argsproc(pr[3])*argsproc(pr[4]))
+		elseif pr[2][2]=="div" then
+			save(pr[3],argsproc(pr[3])/argsproc(pr[4]))
+		elseif pr[2][2]=="mod" then
+			save(pr[3],argsproc(pr[3])%argsproc(pr[4]))
+		end
+	elseif pr[1]=="ln" then
+		table.insert(pstk,1,#argsproc(pr[2]))
+	elseif pr[1]=="pu" then
+		table.insert(pstk,1,argsproc(pr[2]))
+	elseif pr[1]=="po" then
+		table.remove(pstk,argsproc(pr[2]) or 1)
+	elseif pr[1]=="cp" then
+		if pr[3][2]=="eq" then
+			table.insert(pstk,1,argsproc(pr[2])==argsproc(pr[4]))
+		elseif pr[3][2]=="nq" then
+			table.insert(pstk,1,argsproc(pr[2])~=argsproc(pr[4]))
+		elseif pr[3][2]=="lt" then
+			table.insert(pstk,1,argsproc(pr[2])<argsproc(pr[4]))
+		elseif pr[3][2]=="gt" then
+			table.insert(pstk,1,argsproc(pr[2])>argsproc(pr[4]))
+		end
+	elseif pr[1]=="ct" then
+		save(pr[2],argsproc(pr[2])..argsproc(pr[3]))
+	elseif pr[1]=="as" then
+		prg[argsproc(pr[2])+1]=table.concat(argsraw({unpack(pr,3)})," ")
+	else
+		setfenv(loadstring(table.concat(argsraw(pr)," ")),setmetatable({st=st,pstk=pstk,fstk=fstk,asm=asm},{__index=_G}))()
+	end
+end
+--[[local src=
+st text ss:this is centered!:
+st term.setCursorPos term ss:setCursorPos:
+st term.write term ss:write:
+st term.clear term ss:clear:
+st term.getSize term ss:getSize:
+st os.pullEvent os ss:pullEvent:
+st math.floor math ss:floor:
+cl term.getSize
+st Mx arg n:1
+st My arg n:2
+st Cx Mx
+st Cy My
+sd div Cx 2
+sd div Cy 2
+cl math.floor Cx
+st Cx arg n:1
+cl math.floor Cy
+st Cy arg n:1
+cl term.clear
+ln text
+sd div st:1 2
+cl math.floor st:1
+st st:1 arg n:1
+pu Cx
+sd sub st:1 st:2
+po n:2
+cl term.setCursorPos st:1 Cy
+po n:1
+cl term.write text
+cl os.pullEvent ss:key:
+]]
+local src=[[
+st http.get http ss:get:
+cl http.get ss:localhost:
+st s arg n:1
+cl es:nt: s
+]]
+function test()
+	for line in string.gmatch(src,"[^\n]+") do
+		table.insert(prg,line)
+	end
+	local cycles=0
+	while (ip+1)<=#prg do
+		cycles=cycles+1
+		asm(prg[ip+1])
+		ip=ip+1
+	end
+end

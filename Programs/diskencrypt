@@ -1,0 +1,313 @@
+-- uses my old encryption API to encrypt and save the entire hdd
+do
+	-- OPTIONS
+	 
+	local encrhandle="encrypted"
+	local chkshandle="encrypted_password"
+	 
+	-- END OPTIONS
+	 
+	local function serializeImpl(t)
+		local sType = type(t)
+		if sType == "table" then
+			local lstcnt=0
+			for k,v in pairs(t) do
+				lstcnt = lstcnt + 1
+			end
+			local result = "{"
+			local aset=1
+			for k,v in pairs(t) do
+				if k==aset then
+					result = result..serializeImpl(v)..","
+					aset=aset+1
+				else
+					result = result..("["..serializeImpl(k).."]="..serializeImpl(v)..",")
+				end
+			end
+			result = result.."}"
+			return result
+		elseif sType == "string" then
+			return string.gsub(string.gsub(string.format("%q",t),"\\\n","\\n"),"\n","\\n")
+		elseif sType == "number" or sType == "boolean" or sType == "nil" then
+			return tostring(t)
+		elseif sType == "function" then
+			local status,data=pcall(string.dump,t)
+			if status then
+				return 'func('..string.format("%q",data)..')'
+			else
+				error()
+			end
+		else
+			error()
+		end
+	end
+	 
+	function split(T,func)
+		if func then
+			T=func(T)
+		end
+		local Out={}
+		if type(T)=="table" then
+			for k,v in pairs(T) do
+				Out[split(k)]=split(v)
+			end
+		else
+			Out=T
+		end
+		return Out
+	end
+	 
+	local function serialize( t )
+		t=split(t)
+		return serializeImpl( t, tTracking )
+	end
+	 
+	local function unserialize( s )
+		local func, e = loadstring( "return "..s, "serialize" )
+		local funcs={}
+		if not func then
+			return e
+		end
+		setfenv( func, {
+			func=function(S)
+				local new={}
+				funcs[new]=S
+				return new
+			end,
+		})
+		return split(func(),function(val)
+			if funcs[val] then
+				return loadstring(funcs[val])
+			else
+				return val
+			end
+		end)
+	end
+	 
+	local function textbox(bartext)
+		term.setCursorBlink( true )
+		local sLine = ""
+		local nPos = 0
+		local oW, oH = term.getSize()
+		local w,h=oW-4,math.floor(oH/2)
+		local sx,sy=4,math.floor(oH/2) 
+		local function redraw()
+			local nScroll = 0
+			if sx + nPos >= w then
+				nScroll = (sx + nPos) - w
+			end
+			term.setCursorPos(3,math.floor(oH/2)-1)
+			write("/"..string.rep("-",oW-7).."\\")
+			term.setCursorPos(3,math.floor(oH/2)+1)
+			write("\\"..string.rep("-",oW-7).."/")
+			term.setCursorPos(math.floor(oW/2)-math.floor(#bartext/2),math.floor(oH/2)-1)
+			write(bartext)
+			term.setCursorPos( sx, sy )
+			term.write(term.write( string.rep(" ", w - sx + 1) ))
+			term.setCursorPos( sx, sy )
+			term.write(term.write( string.sub( sLine, nScroll + 1 ) ))
+			term.setCursorPos(3,math.floor(oH/2))
+			write("|")
+			term.setCursorPos(oW-3,math.floor(oH/2))
+			write("|")
+			term.setCursorPos( sx + nPos - nScroll, sy )
+		end
+		redraw()
+		while true do
+			local sEvent, param = os.pullEvent()
+			if sEvent == "char" then
+				sLine = string.sub( sLine, 1, nPos ) .. param .. string.sub( sLine, nPos + 1 )
+				nPos = nPos + 1
+				redraw()
+			elseif sEvent == "key" then
+			if param == 28 then
+					break
+				elseif param == 203 then
+					if nPos > 0 then
+						nPos = nPos - 1
+						redraw()
+					end
+				elseif param == 205 then			   
+					if nPos < string.len(sLine) then
+						nPos = nPos + 1
+						redraw()
+					end
+				elseif param == 200 or param == 208 then
+					if _tHistory then
+						if param == 200 then
+							if nHistoryPos == nil then
+								if #_tHistory > 0 then
+									nHistoryPos = #_tHistory
+								end
+							elseif nHistoryPos > 1 then
+								nHistoryPos = nHistoryPos - 1
+							end
+						else
+							if nHistoryPos == #_tHistory then
+								nHistoryPos = nil
+							elseif nHistoryPos ~= nil then
+								nHistoryPos = nHistoryPos + 1
+							end						
+						end
+						if nHistoryPos then
+				sLine = _tHistory[nHistoryPos]
+				nPos = string.len( sLine )
+			else
+							sLine = ""
+							nPos = 0
+						end
+						redraw()
+			end
+				elseif param == 14 then
+					if nPos > 0 then
+						sLine = string.sub( sLine, 1, nPos - 1 ) .. string.sub( sLine, nPos + 1 )
+						nPos = nPos - 1				
+						redraw()
+					end
+				elseif param == 29 then
+					term.setCursorBlink( false )
+					return nil
+				end
+			end
+		end
+		term.setCursorBlink( false )
+		term.setCursorPos( w + 1, sy )
+		return sLine
+	end
+	local encryptapi="apis/enc"
+	if not enc then
+		if not fs.exists(encryptapi) then
+			local web_response = http.get("http://pastebin.com/raw.php?i=WRTfH0yx")
+			if not fs.exists("apis") then
+				fs.makeDir("apis")
+			end
+			local akmn = io.open(encryptapi, "w")
+			akmn:write(web_response:readAll())
+			akmn:close()
+		end
+		os.loadAPI(encryptapi)
+	end
+	local file=fs.open(shell.getRunningProgram(),"r")
+	local compiled=file.readAll()
+	file.close()
+	 
+	 
+	local function clear()
+		term.clear()
+		term.setCursorPos(1,1)
+	end
+	 
+	 
+	clear()
+	if fs.exists(encrhandle) then
+		os.pullEvent=os.pullEventRaw
+		local file=fs.open(chkshandle,"r")
+		local chk=file.readAll()
+		file.close()
+		local pass=textbox("Password required")
+		if not pass then
+			os.shutdown()
+		end
+		if enc.checksum(pass)~=tonumber(chk) then
+			clear()
+			print("Incorrect password.")
+			sleep(1)
+			os.reboot()
+		end
+		local file=fs.open(encrhandle,"r")
+		local data=file.readAll()
+		file.close()
+		fs.delete(encrhandle)
+		local data=enc.decrypt(data,pass)
+		if shell.getRunningProgram()=="startup" then
+			fs.delete("startup")
+		end
+		os.unloadAPI(encryptapi)
+		clear()
+		for k,v in pairs(data) do
+			print(k)
+			if v then
+				file=io.open(k,"w")
+				file:write(v)
+				file:close()
+			else
+				if fs.exists(k) and k~="/" and k~="apis/" then
+					fs.delete(k)
+				elseif k~="/" and k~="apis/" then
+					fs.makeDir(k)
+				end
+			end
+			sleep(0)
+		end
+		os.reboot()
+	else
+		local pass
+		if not fs.exists(chkshandle) then
+			pass=textbox("Password to encrypt")
+			if not pass then
+				clear()
+				error()
+			end
+			local file=io.open(chkshandle,"w")
+			file:write(pass)
+			file:close()
+		end
+		if not pass then
+			local file=fs.open(chkshandle,"r")
+			pass=file.readAll()
+			file.close()
+		end
+		local data={}
+		local pending={"/"}
+		clear()
+		print("packing...")
+		local folders={}
+		while true do
+			if not pending[1] then
+				for k,v in pairs(folders) do
+					fs.delete(v)
+				end
+				break
+			end
+			local file=pending[1]
+			print(file)
+			table.remove(pending,1)
+			if (fs.isReadOnly(file) or file=="disk" or file==encryptapi) and file~="/" then
+			elseif fs.isDir(file) then
+				data[file]=false
+				for k,v in pairs(fs.list(file)) do
+					table.insert(pending,fs.combine(file,v))
+				end
+				if not fs.isReadOnly(file) then
+					table.insert(folders,file)
+				end
+			else
+				local file2=fs.open(file,"r")
+				if file2 then
+					data[file]=file2.readAll()
+					file2.close()
+					fs.delete(file)
+				else
+					print(file.." is unreadable!")
+				end
+			end
+			sleep(0)
+		end
+		local file=io.open(encrhandle,"w")
+		file:write(enc.encrypt(data,pass))
+		file:close()
+		pass=enc.checksum(pass)
+		local file=io.open(chkshandle,"w")
+		file:write(pass)
+		file:close()
+		local file=io.open("startup","w")
+		file:write(compiled)
+		file:close()
+		local file=io.open(chkshandle,"w")
+		file:write(pass)
+		file:close()
+		print("done!")
+		sleep(2)
+		os.shutdown()
+	end
+end

@@ -1,0 +1,73 @@
+-- a printer for old RP light grids with bundled cables
+local sides={"back","right","front","left"}
+function set(Y,X,TF)
+	local DT=rs.getBundledOutput(sides[math.ceil(Y/2)])
+	local C
+	if math.floor(Y/2)==Y/2 then
+		C=7
+	else
+		C=-1
+	end
+	if TF then
+		DT=colors.combine(DT,2^(X+C))
+	else
+		DT=colors.subtract(DT,2^(X+C))
+	end
+	rs.setBundledOutput(sides[math.ceil(Y/2)],DT)
+	return X+C,sides[math.ceil(Y/2)],C
+end
+function clear()
+	for k,v in pairs(sides) do
+		rs.setBundledOutput(v,0)
+	end
+end
+
+letters={ {
+	"        ",
+	"  XXXXX ",
+	" X      ",
+	" X      ",
+	" X      ",
+	" X      ",
+	"  XXXXX ",
+	"        "},{
+	"        ",
+	" XXXXX  ",
+	" X    X ",
+	" X    X ",
+	" XXXXX  ",
+	" X    X ",
+	" X    X ",
+	"        "},{
+	"        ",
+	"  XXXX  ",
+	" X    X ",
+	" X    X ",
+	" XXXXXX ",
+	" X    X ",
+	" X    X ",
+	"        "},{
+	"        ",
+	" XXXXX  ",
+	" X    X ",
+	" X    X ",
+	" XXXXX  ",
+	" X      ",
+	" X      ",
+	"        "
+}}
+
+for k,v in pairs(letters) do
+	clear()
+	for l1=1,8 do
+		for l2=1,8 do
+		print(l1)
+			local d=string.sub(v[l1],9-l2,9-l2)
+			if d=="X" then
+				set(l1,l2,true)
+			end
+		end
+	end
+	sleep(3)
+end
+clear()

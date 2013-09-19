@@ -1,0 +1,982 @@
+-- i made this the same time as nethost, and developed it for awhile
+
+-- by PixelToast aka infinikiller64
+-- all downloads must be linked directly to the forum post
+-- unless its distributed privatly (in a modpack or such) or with permission
+-- use of the updater is granted without permission
+
+-- remove comments if you are evil and use tekkit
+--local function term.isColor()
+--	return false
+--end
+if not term.isColor then
+	error("tekkit not supported")
+end
+local modemmode=false
+if rednet.CHANNEL_BROADCAST then
+	modemmode=true
+end
+function plyd(data)
+	local d=true
+	while d do
+		d=false
+		if data[1]=="rednet_message" and not modemmode then
+			data={"modem_message"}
+		elseif data[1]=="modem_message" then
+			
+		elseif data[1]=="monitor_touch" then
+			plyd[1]="mouse_click"
+			plyd[2]=3
+		end
+	end
+end
+local sel={}
+local tSel={}
+
+local tArgs=tArgs or {...}
+local doupdate=false
+local function update()
+	if fs.exists("diskplayer_temp") then
+		fs.delete("diskplayer_temp")
+	end
+	local cdir=shell.getRunningProgram()
+	if fs.isReadOnly(cdir) then
+		cdir="/diskplayer"
+	end
+	local update_temp=[[
+	local file=fs.open(arg1,"w")
+	file.write(arg2)
+	file.close()
+	fs.delete("diskplayer_temp")
+	]]
+	http.request("http://pixeltoast.x64.me/cc/diskplayer")
+	while true do
+		local p={os.pullEvent()}
+		if p[1]=="http_success" then
+			local file=fs.open("diskplayer_temp","w")
+            file.write(update_temp)
+            file.close()
+            os.run({arg1=cdir,arg2=p[3].readAll()},"diskplayer_temp")
+			break
+		elseif p[1]=="http_failure" then
+			error("Oh noes! my site is down.")
+		end
+	end
+	term.clear()
+	term.setCursorPos(1,1)
+end
+if tArgs[1]=="update" then
+	local a,b=pcall(update)
+	if not a then
+		print(b)
+	end
+	error("Update complete.")
+end
+
+-- function ports from infutil / snet:
+do
+	local side
+	local sides={"right","left","front","back","top","bottom"}
+	for l1=1,6 do
+		if peripheral.getType(sides[l1])=="modem" then rednet.open(sides[l1]) side=sides[l1] end
+	end
+	if not side then
+		error("No modem attached.")
+	end
+end
+local function compress( ... ) -- serializes all of its arguments into a table and catches errors
+	local E,D=pcall(textutils.serialize,{...}) 
+	if E then
+		return string.sub(D,2,-2)
+	else
+		return false
+	end
+end
+local function decompress(S) -- convert a serialized table into a normal one and catches errors
+	if not S then
+		return false
+	end
+	local E,D,C=pcall(textutils.unserialize,"{"..S.."}")
+	if C or not E then
+		return false
+	else
+		return type(D)=="table" and D
+	end
+end
+local function savePrefs(name,data,tf) -- saves data to a file
+	local file=io.open(name,"w")
+	if tf then
+		file:write(data)
+	else
+		file:write(textutils.serialize(data))
+	end
+	file:close()
+end
+local function readPrefs(name,tf) -- reads data from a file
+	local file=fs.open(name,"r")
+	if not file then return false end
+	local dat
+	if tf then
+		dat=file.readAll()
+	else
+		dat=textutils.unserialize(file.readAll())
+	end
+	file.close()
+	return dat
+end
+-- end ports
+local dir={}
+dir.main=".diskplayer/"
+dir.settings=dir.main.."settings"
+
+local settings={}
+if fs.exists(dir.main) then
+	settings=readPrefs(dir.settings)
+	if not settings then
+		settings={}
+	end
+else
+	fs.makeDir(dir.main)
+	settings={}
+end
+settings.chan=settings.chan or 556
+
+local mon
+for k,v in pairs(rs.getSides()) do
+	if peripheral.getType(v)=="monitor" then
+		mon=peripheral.wrap(v)
+	end
+end
+local termsize=1
+if tArgs[1]=="-m" then
+	termsize=tonumber(tArgs[2])
+else
+	termsize=1
+end
+disk={
+	["C418 - 11"]={
+		len=70,
+		artist="C418",
+		short="11"
+	},
+	["C418 - 13"]={
+		len=180,
+		artist="C418",
+		short="13"
+	},
+	["C418 - cat"]={
+		len=186,
+		artist="C418",
+		short="cat"
+	},
+	["C418 - blocks"]={
+		len=347,
+		artist="C418",
+		short="blocks"
+	},
+	["C418 - chirp"]={
+		len=186,
+		artist="C418",
+		short="chirp"
+	},
+	["C418 - far"]={
+		len=172,
+		artist="C418",
+		short="far"
+	},
+	["C418 - mall"]={
+		len=197,
+		artist="C418",
+		short="mall"
+	},
+	["C418 - mellohi"]={
+		len=98,
+		artist="C418",
+		short="mellohi"
+	},
+	["C418 - stal"]={
+		len=151,
+		artist="C418",
+		short="stal"
+	},
+	["C418 - strad"]={
+		len=191,
+		artist="C418",
+		short="strad"
+	},
+	["C418 - ward"]={
+		len=250,
+		artist="C418",
+		short="ward"
+	},
+	["C418 - wait"]={
+		len=210,
+		artist="C418",
+		short="wait"
+	},
+	["wait"]={
+		len=235,
+		real="C418 - wait",
+		artist="C418",
+		short="wait"
+	},
+	["Valve - Want You Gone"]={
+		len=130,
+		artist="Jonathan Coulton",
+		short="gone"
+	},
+	["Valve - Still Alive"]={
+		len=170,
+		artist="Jonathan Coulton",
+		short="alive"
+	},
+	["Valve - Radio Loop"]={
+		len=22,
+		artist="Valve",
+		short="radio"
+	},
+	["pg.wantyougone"]={
+		len=130,
+		real="Valve - Want You Gone",
+		artist="Jonathan Coulton",
+		short="gone"
+	},
+	["pg.stillalive"]={
+		len=170,
+		real="Valve - Still Alive",
+		artist="Jonathan Coulton",
+		short="alive"
+	},
+	["pg.radioloop"]={
+		len=22,
+		real="Valve - Radio Loop",
+		artist="Valve",
+		short="radio"
+	},
+}
+local list={}
+setmetatable(disk,{__index=function(s,n) return {artist="Error",short="",len=0} end})
+rednet.broadcast(compress("reqdisks"))
+if mon then
+	if mon.setTextScale then
+		mon.setTextScale(termsize)
+	end
+end
+local isMon=false
+local function mrender(func)
+	if mon then
+		isMon=true
+		term.redirect(mon)
+		func()
+		term.restore()
+		isMon=false
+	end
+end
+local function renderdswait()
+	term.clear()
+	local Mx,My=term.getSize()
+	local Cx,Cy=math.floor(Mx/2),math.floor(My/2)
+	local txt="Waiting for disks."
+	term.setCursorPos(Cx-math.floor(#txt/2),Cy)
+	term.write(txt)
+end
+renderdswait()
+mrender(renderdswait)
+local timer
+while true do
+	local p={os.pullEvent()}
+	local p2=decompress(p[3])
+	if p[1]=="rednet_message" and p2 then
+		if p2[1]=="gotdisks" then
+			for k,v in pairs(p2[2]) do
+				table.insert(list,v)
+			end
+			if not timer then
+				timer=os.startTimer(1)
+			end
+		end
+	elseif p[1]=="timer" and p[2]==timer then
+		break
+	end
+end
+function reformat()
+	diskcnt=0
+	ms=0
+	for k,v in pairs(list) do
+		diskcnt=diskcnt+1
+		if (#disk[v].short)>ms then
+			ms=string.len(disk[v].short)
+		end
+	end
+end
+reformat()
+function cRate(N)
+	if N==nil then return "N/A" end
+	sum=0
+	for k,v in pairs(N) do
+		sum=sum+v
+	end
+	return (math.floor((sum/#N)*20)/2).."/10"
+end
+chs=math.random(1,diskcnt)
+chs2=1
+
+local renderchoices
+local renderborder
+local renderPd
+local function arender()
+	local function a()
+		if term.isColor() then
+			term.setBackgroundColor(colors.black)
+		end
+	end
+	a()
+	mrender(a)
+	term.clear()
+	mrender(term.clear)
+	renderborder()
+	mrender(renderborder)
+	renderPl()
+end
+local function brender()
+	renderchoices()
+	mrender(renderchoices)
+end
+function renderchoices()
+	local Mx,My=term.getSize()
+	local Cx,Cy=math.floor(Mx/2),math.floor(My/2)
+	for l1=1,Mx do
+		local choice=disk[list[l1+chs-Cy]].short or "Error"
+		term.setCursorPos(1,l1)
+		term.write(string.rep(" ",ms+6))
+		if l1==Cy then
+			if term.isColor() then
+				term.setTextColor(colors.lime)
+			end
+			choice="["..choice..string.rep(" ",ms-string.len(choice)).."]"
+		else
+			if term.isColor() then
+				term.setTextColor(colors.green)
+			end
+			choice=" "..choice..string.rep(" ",ms-string.len(choice))
+		end
+		term.setCursorPos(3,l1)
+		write(choice)
+		if tSel[l1+chs-Cy] then
+			term.setCursorPos(1,l1)
+			if term.isColor() then
+				term.setTextColor(colors.blue)
+			end
+			term.write("*")
+		end
+		if term.isColor() then
+			term.setTextColor(colors.white)
+		end
+	end
+	term.setCursorPos(9+ms,1)
+	term.write(string.rep(" ",Mx-(7+ms)))
+	term.setCursorPos(9+ms,1)
+	local full
+	if not list[chs] then
+		full="Unknown"
+	elseif disk[list[chs]].real then
+		full=disk[list[chs]].real
+	else
+		full=list[chs]
+	end
+	if term.isColor() then
+		term.setTextColor(colors.blue)
+	end
+	term.write("Full name: ")
+	if term.isColor() then
+		term.setTextColor(colors.lime)
+	end
+	term.write(full)
+	term.setCursorPos(9+ms,3)
+	term.write(string.rep(" ",Mx-(7+ms)))
+	term.setCursorPos(9+ms,3)
+	if term.isColor() then
+		term.setTextColor(colors.blue)
+	end
+	term.write("Artist: ")
+	if term.isColor() then
+		term.setTextColor(colors.lime)
+	end
+	term.write(disk[list[chs]].artist)
+	if term.isColor() then
+		term.setTextColor(colors.white)
+	end
+end
+
+function renderborder()
+	local Mx,My=term.getSize()
+	local Cx,Cy=math.floor(Mx/2),math.floor(My/2)
+	for l1=1,My do
+		term.setCursorPos(ms+7,l1)
+		if term.isColor() then
+			term.setTextColor(colors.lightBlue)
+		end
+		term.write("|")
+	end
+	term.setCursorPos(8+ms,7)
+	term.write(string.rep("-",Mx-(ms+7)))
+	if term.isColor() then
+		term.setCursorPos(9+ms,5)
+		for k,v in pairs({"Stop","Play","Select"}) do
+			term.setTextColor(colors.blue)
+			term.write(v)
+			if k~=3 then
+				term.setTextColor(colors.lime)
+				term.write(" | ")
+			end
+		end
+	end
+	if term.isColor() then
+		term.setTextColor(colors.lightBlue)
+	end
+	term.setCursorPos(8+ms,My-1)
+	term.write(string.rep("-",Mx-(ms+7)))
+	if term.isColor() then
+		term.setCursorPos(9+ms,My)
+		for k,v in pairs({"Update","Info","Settings"}) do
+			term.setTextColor(colors.blue)
+			if not (isMon and k==3) then
+				term.write(v)
+			end
+			if (k~=3 and isMon) or (not isMon) then
+				term.setTextColor(colors.lightBlue)
+				term.write(" | ")
+			end
+		end
+	end
+	term.setTextColor(colors.white)
+end
+
+function renderPd(nm,dtr)
+	if disk[nm].short=="" then
+		return
+	end
+	term.clear()
+	mrender(term.clear)
+	local udtimer=os.startTimer(1)
+	local progress=0
+	local function render()
+		local Mx,My=term.getSize()
+		local Cx,Cy=math.floor(Mx/2),math.floor(My/2)
+		if term.isColor() then
+			term.setTextColor(colors.lightBlue)
+		end
+		for l1=1,4 do
+			term.setCursorPos(4,Cy+l1-2)
+			term.write("|"..string.rep(" ",Mx-8).."|")
+		end
+		term.setCursorPos(4,Cy-2)
+		term.write(","..string.rep("-",Mx-8)..",")
+		term.setCursorPos(4,Cy+2)
+		term.write("'"..string.rep("-",Mx-8).."'")
+		local full
+		if disk[nm].real then
+			full=disk[nm].real
+		else
+			full=nm
+		end
+		local txt="Now playing: "..full
+		term.setCursorPos(Cx-math.floor(#txt/2),Cy-1)
+		if term.isColor() then
+			term.setTextColor(colors.green)
+		end
+		term.write("Now playing: ")
+		if term.isColor() then
+			term.setTextColor(colors.lime)
+		end
+		term.write(full)
+		if term.isColor() then
+			term.setTextColor(colors.blue)
+		end
+		term.setCursorPos(5,Cy+1)
+		term.write(string.rep("=",math.floor((Mx-11)*(progress/(disk[nm].len)))))
+		if term.isColor() then
+			term.setTextColor(colors.cyan)
+		end
+		term.write("|-|")
+		if term.isColor() then
+			term.setTextColor(colors.blue)
+		end
+		term.write(string.rep("=",Mx-(math.floor((Mx-11)*(progress/(disk[nm].len)))+11)))
+		if term.isColor() then
+			term.setCursorPos(Mx-8,Cy-2)
+			term.setTextColor(colors.blue)
+			term.write("Back")
+			term.setCursorPos(Mx-13,Cy-2)
+			if dtr then
+				term.write("Next")
+			else
+				term.write("Stop")
+			end
+			term.setTextColor(colors.cyan)
+		end
+		local remaning=(disk[nm].len)-progress
+		local secs=remaning-(math.floor(remaning/60)*60)
+		if secs<10 then
+			secs="0"..secs
+		end
+		local text=" ["..math.floor(remaning/60)..":"..secs.."] "
+		term.setCursorPos(Cx-math.floor((#text)/2),Cy)
+		term.write(text)
+		if term.isColor() then
+			term.setTextColor(colors.white)
+		end
+	end
+	render()
+	mrender(render)
+	while true do
+		local p={os.pullEvent()}
+		local p2=decompress(p[3])
+		if p[2]==udtimer then
+			if math.floor(progress/(disk[nm].len))>=1 then
+				break
+			end
+			udtimer=os.startTimer(1)
+			progress=progress+1
+			render()
+			mrender(render)
+		elseif p[1]=="key" and p[2]==28 then
+			if not dtr then
+				arender()
+				brender()
+			end
+			return "menu"
+		elseif p[1]=="key" and p[2]==14 then
+			rednet.broadcast(compress("diskstop"))
+			if not dtr then
+				arender()
+				brender()
+			end
+			return "next"
+		elseif p[1]=="monitor_touch" then
+			os.queueEvent("mouse_click",3,p[3],p[4])
+		elseif p[1]=="mouse_click" and (p[2]==1 or p[2]==3) then
+			local Mx,My=term.getSize()
+			local Cx,Cy=math.floor(Mx/2),math.floor(My/2)
+			if p[2]==3 then
+				mrender(function()
+					Mx,My=term.getSize()
+					Cx,Cy=math.floor(Mx/2),math.floor(My/2)
+				end)
+			end
+			if (p[3]<=Mx-5 and p[3]>=Mx-8) and p[4]==Cy-2 then
+				os.queueEvent("key",28)
+			elseif (p[3]<=Mx-9 and p[3]>=Mx-13) and p[4]==Cy-2 then
+				os.queueEvent("key",14)
+			end
+		end
+		if p2 and p[1]=="rednet_message" then
+			if p2[1]=="diskstop" then
+				os.queueEvent("key",14)
+			elseif p2[1]=="diskplay" and not dtr then
+				if disk[p2[2]].short~="" then
+					udtimer=os.startTimer(1)
+					progress=0
+					nm=p2[2]
+				end
+			end
+		end
+	end
+	if not dtr then
+		arender()
+		brender()
+	end
+end
+
+playlist={shf=0,rep=1,tme=0}
+
+function nxtup(nm)
+	if playlist.tme==0 then
+		return
+	end
+	local tLeft=playlist.tme
+	local function rtop()
+		local Mx,My=term.getSize()
+		local Cx,Cy=math.floor(Mx/2),math.floor(My/2)
+		term.clear()
+		local text="Next up:"
+		local text2
+		if disk[nm].real then
+			text2=disk[nm].real
+		else
+			text2=nm
+		end
+		term.setTextColor(colors.green)
+		term.setCursorPos(Cx-math.floor((#text)/2),Cy-1)
+		term.write(text)
+		term.setTextColor(colors.lime)
+		term.setCursorPos(Cx-math.floor((#text2)/2),Cy)
+		term.write(text2)
+	end
+	local function render()
+		local Mx,My=term.getSize()
+		local Cx,Cy=math.floor(Mx/2),math.floor(My/2)
+		local secs=tLeft-(math.floor(tLeft/60)*60)
+		if secs<10 then
+			secs="0"..secs
+		end
+		local text=" ["..math.floor(tLeft/60)..":"..secs.."] "
+		term.setTextColor(colors.cyan)
+		term.setCursorPos(Cx-math.floor((#text)/2),Cy+1)
+		term.write(text)
+	end
+	rtop()
+	mrender(rtop)
+	local tm=os.startTimer(0)
+	while true do
+		local p={os.pullEvent()}
+		local p2=decompress(p[3])
+		if p[1]=="timer" then
+			if p[2]==tm then
+				tLeft=tLeft-1
+				render()
+				mrender(render)
+				tm=os.startTimer(1)
+				if tLeft==0 then
+					sleep(1)
+					return
+				end
+			end
+		elseif p[1]=="rednet_message" and p2 then
+			if p2[1]=="diskstop" then
+				break
+			elseif p2[1]=="diskplay" then
+				renderPd(p2[2])
+			end
+		elseif p[1]=="mouse_click" and (p[2] == 1 or p[2] == 3) then
+			local Mx,My=term.getSize()
+			local Cx,Cy=math.floor(Mx/2),math.floor(My/2)
+			if p[2]==3 then
+				mrender(function()
+					Mx,My=term.getSize()
+					Cx,Cy=math.floor(Mx/2),math.floor(My/2)
+				end)
+			end
+			local text
+			if disk[nm].real then
+				text=disk[nm].real
+			else
+				text=nm
+			end
+			local x,y=p[3],p[4]
+			if x>=(Cx-math.floor((#text)/2)) and x<=((Cx-math.floor((#text)/2))+(#text)-1) and y==Cy then
+				break
+			end
+		elseif p[1]=="monitor_touch" then
+			os.queueEvent("mouse_click",3,p[3],p[4])
+		end
+	end
+end
+
+function openWn(nm)
+	local function tRender()
+		local Mx,My=term.getSize()
+		local Cx,Cy=math.floor(Mx/2),math.floor(My/2)
+		if term.isColor() then
+			term.setTextColor(colors.lightBlue)
+		end
+		term.clear()
+		term.setCursorPos(2,2)
+		term.write(","..string.rep("-",Mx-4)..",")
+		term.setCursorPos(2,My-1)
+		term.write("'"..string.rep("-",Mx-4).."'")
+		for l1=3,My-2 do
+			term.setCursorPos(2,l1)
+			term.write("|"..string.rep(" ",Mx-4).."|")
+		end
+		if term.isColor() then
+			term.setTextColor(colors.blue)
+		end
+		local names={"Info","Settings"}
+		term.setCursorPos(Cx-math.floor((#names[nm])/2),2)
+		term.write(names[nm])
+		if nm~=1 then
+			term.setTextColor(colors.blue)
+			term.setCursorPos(Mx-6,2)
+			term.write("Back")
+		end
+		local credits={
+		code={"PixelToast"},
+		}
+		if nm==1 then
+			term.setCursorPos(Cx-4,3)
+			term.write("v1.1.0b2")
+			if term.isColor() then
+				term.setTextColor(colors.green)
+			end
+			term.setCursorPos(Cx-4,5)
+			term.write("Credits: ")
+			local cnt=0
+			for k,v in pairs(credits) do
+				for j,l in pairs(v) do
+					term.setCursorPos(4,6+cnt)
+					cnt=cnt+1
+					term.setTextColor(colors.lime)
+					term.write(l)
+					term.setTextColor(colors.green)
+					term.write(" - ")
+					term.setTextColor(colors.blue)
+					term.write(k)
+				end
+			end
+		elseif nm==2 then
+			term.setCursorPos(4,4)
+			term.setTextColor(colors.blue)
+			term.write("Channel: ")
+			term.setTextColor(colors.lime)
+			term.write(settings.chan)
+		end
+	end
+	tRender()
+	mrender(tRender)
+	while true do
+		local p={os.pullEvent()}
+		if p[1]=="monitor_touch" or p[1]=="mouse_click" then
+			break
+		end
+	end
+	arender()
+	brender()
+end
+
+function renderPl()
+	local function render()
+		local Mx,My=term.getSize()
+		local Cx,Cy=math.floor(Mx/2),math.floor(My/2)
+		if term.isColor() then
+			playlist.tme=math.max(0,playlist.tme)
+			term.setTextColor(colors.blue)
+			term.setCursorPos(ms+9,9)
+			term.write("Shuffle: ")
+			playlist.shf=playlist.shf%2
+			if playlist.shf==1 then
+				term.setTextColor(colors.lime)
+				term.write("ON ")
+			else
+				term.setTextColor(colors.red)
+				term.write("OFF")
+			end
+			term.setTextColor(colors.blue)
+			term.setCursorPos(ms+9,10)
+			term.write("Repeat: ")
+			playlist.rep=playlist.rep%2
+			if playlist.rep==1 then
+				term.setTextColor(colors.lime)
+				term.write("ON ")
+			else
+				term.setTextColor(colors.red)
+				term.write("OFF")
+			end
+			term.setCursorPos(ms+9,11)
+			term.setTextColor(colors.blue)
+			term.write("Time: ")
+			term.setTextColor(colors.lime)
+			local secs=playlist.tme-(math.floor(playlist.tme/60)*60)
+			if secs<10 then
+				secs="0"..secs
+			end
+			local text=math.floor(playlist.tme/60)..":"..secs
+			term.write(text..string.rep(" ",Mx-(ms+14+(#text))))
+			term.setCursorPos(ms+9,12)
+			term.setTextColor(colors.blue)
+			term.write("< << >> >")
+			
+		end
+	end
+	render()
+	mrender(render)
+end
+
+local function playPl()
+	playlist.dat={}
+	while true do
+		local sSel
+		if playlist.shf==1 then
+			while sSel==nil or playlist.dat[sSel] do
+				sSel=math.random(1,#sel)
+			end
+		else
+			sSel=#playlist.dat+1
+		end
+		nxtup(list[sel[sSel]])
+		rednet.broadcast(compress("diskplay",list[sel[sSel]]))
+		local xtcde=renderPd(list[sel[sSel]],true)
+		if xtcde=="menu" then
+			break
+		elseif xtcde=="next" then
+			sleep(1)
+		end
+		playlist.dat[sSel]=true
+		if #playlist.dat==#sel then
+			if playlist.rep==0 then
+				break
+			end
+			playlist.dat={}
+		end
+	end
+	arender()
+	brender()
+end
+
+arender()
+brender()
+local function wrap()
+	if chs>diskcnt then
+		chs=1
+	elseif chs<1 then
+		chs=diskcnt
+	end
+end
+
+local function flopSel(nm)
+	if tSel[nm] then
+		tSel[nm]=false
+		for k,v in pairs(sel) do
+			if v==(nm) then
+				table.remove(sel,k)
+				break
+			end
+		end
+	else
+		tSel[nm]=true
+		table.insert(sel,nm)
+	end
+end
+local function main()
+	while true do
+		local typ,key,dat,ext=os.pullEventRaw()
+		if typ=="key" then
+			if key==28 then
+				if #sel>0 then
+					playPl()
+				else
+					rednet.broadcast(compress("diskplay",list[chs]))
+					renderPd(list[chs])
+				end
+			elseif key==208 then
+				chs=chs+1
+				wrap()
+				brender()
+			elseif key==200 then
+				chs=chs-1
+				wrap()
+				brender()
+			elseif key==14 then
+				rednet.broadcast(compress("diskstop"))
+			end
+		elseif typ=="rednet_message" then
+			local c=decompress(dat)
+			if type(c)=="table" then
+				if c[1]=="diskplay" and disk[c[2]].len>0 then
+					renderPd(c[2])
+				elseif c[1]=="gotdisks" then
+					for k,v in pairs(c[2]) do
+						local exists=false
+						for k,v2 in pairs(list) do
+							if v==v2 then
+								exists=true
+							end
+						end
+						if not exists then
+							table.insert(list,v)
+						end
+					end
+					reformat()
+					brender()
+				end
+			end
+		elseif typ=="mouse_scroll" then
+			chs=chs+key
+			wrap()
+			brender()
+		elseif typ=="mouse_click" and (key == 1 or key == 4) then
+			local Mx,My=term.getSize()
+			local Cx,Cy=math.floor(Mx/2),math.floor(My/2)
+			if key==4 then
+				mrender(function()
+					Mx,My=term.getSize()
+					Cx,Cy=math.floor(Mx/2),math.floor(My/2)
+				end)
+			end
+			local x,y=dat,ext
+			if x<ms+4 and x>=4 and list[y+chs-Cy] then
+				if chs==y+chs-Cy then
+					os.queueEvent("key",28)
+				else
+					chs=y+chs-Cy
+					wrap()
+					brender()
+				end
+			elseif (x==1 or x==2) and list[y+chs-Cy] then
+				flopSel(y+chs-Cy)
+				brender()
+			elseif (x<=12+ms and x>=9+ms) and y==5 then -- Stop
+				os.queueEvent("key",14)
+			elseif (x<=19+ms and x>=16+ms) and y==5 then -- Play
+				os.queueEvent("key",28)
+			elseif (x<=28+ms and x>=23+ms) and y==5 then -- Select
+				flopSel(chs)
+				brender()
+			elseif (x<=15+ms and x>=9+ms) and y==9 then -- Shuffle
+				playlist.shf=playlist.shf+1
+				renderPl()
+			elseif (x<=14+ms and x>=9+ms) and y==10 then -- Repeat
+				playlist.rep=playlist.rep+1
+				renderPl()
+			elseif (x<=17+ms and x>=9+ms) and y==12 then -- < << >> >
+				if x==9+ms then -- <
+					playlist.tme=playlist.tme-5 -- <<
+				elseif x==11+ms or x==12+ms then
+					playlist.tme=playlist.tme-60
+				elseif x==14+ms or x==15+ms then -- >>
+					playlist.tme=playlist.tme+60
+				elseif x==17+ms then -- >
+					playlist.tme=playlist.tme+5
+				end
+				renderPl()
+			elseif (x<=14+ms and x>=9+ms) and y==My then -- Update
+				update()
+				doupdate=true
+				break
+			elseif (x<=21+ms and x>=18+ms) and y==My then -- Info
+				openWn(1)
+			elseif (x<=32+ms and x>=25+ms) and y==My and key~=4 then -- Settings
+				openWn(2)
+			elseif key~=4 and x==Mx and y==My then
+				break
+			end
+		elseif typ=="monitor_touch" then
+			os.queueEvent("mouse_click",4,dat,ext)
+		elseif typ=="terminate" then
+			break
+		end
+	end
+end
+local a,b=pcall(main)
+term.setCursorPos(1,1)
+term.clear()
+mrender(function()
+	term.setCursorPos(1,1)
+	term.clear()
+end)
+if not a then
+	sleep(0)
+	print("Error!")
+	print(b)
+	mrender(function() print(b) end)
+	while true do
+		local p=os.pullEvent()
+		if p=="monitor_touch" or p=="mouse_click" or "key" or "char" then
+			break
+		end
+	end
+	os.reboot()
+end
+if doupdate then
+	setfenv(loadfile(shell.getRunningProgram()),setmetatable({tArgs=tArgs},{__index=getfenv()}))()
+end

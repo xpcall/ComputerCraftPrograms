@@ -1,0 +1,54 @@
+-- was making a cracker for scon
+
+local modem
+local channel=13000
+for k,v in pairs(rs.getSides()) do
+	if peripheral.getType(v)=="modem" then
+		modem=peripheral.wrap(v)
+		modem.open(channel)
+	end
+end
+local pass={}
+local chars={}
+for char in string.gmatch("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0987654321 ",".") do
+	pass[char]=true	
+	chars[char]=true
+end
+for l1=32,126 do
+	chars[string.char(l1)]=true
+end
+local pcomb={}
+for k,v in pairs(chars) do
+	for l,n in pairs(chars) do
+		pcomb[bit.bxor(string.byte(k),string.byte(l))]=k..l
+	end
+end
+local con={}
+setmetatable(con,{__index=function(s,n) s[n]={} return s[n] end})
+while true do
+	local p={os.pullEvent()}
+	if p[1]=="modem_message" then
+		local dat=infutil.decompress(p[5])
+		if dat then
+			if dat[3]==3 then
+				if dat[4]=="b1" then
+					con[dat[2]][dat[1]]={nonce=dat[5],hist={}}
+					con[dat[1]][dat[2]]=con[dat[2]][dat[1]]
+				elseif dat[4]=="a2" then
+					con[dat[1]][dat[2]].hash=dat[5]
+				elseif dat[4]=="b2" then
+					if not dat[5] then
+						con[dat[2]][dat[1]]=nil
+						con[dat[1]][dat[2]]=nil
+					end
+				end
+			elseif dat[3]==2 then
+				local t=con[dat[2]][dat[1]].hist
+				table.insert(t,dat[4])
+				if #t>2 then
+					
+				end
+			end
+		end
+	end
+end

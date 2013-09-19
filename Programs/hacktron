@@ -1,0 +1,12 @@
+-- prevents people from playing my game, you bastard
+
+snet.open()
+while true do
+	a,b=rednet.receive()
+	if b=="TRON:pingcon" then
+		rednet.send(a,"TRON:pongcon")
+		rednet.send(a,'"MOVE",{x=1000,y=1000},"Hacked by PixelToast"')
+		rednet.send(a,'"MOVE",{x=1012,y=1000},"x"')
+		rednet.send(a,'"DIE"')
+	end
+end
