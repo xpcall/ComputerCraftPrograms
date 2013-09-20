@@ -1,3 +1,5 @@
+-- a WIP program that makes sure my reactor stays at maximum efficiency
+
 local rodSlots={12,11,13,17}
 local isoSlot=12
 local sNuke={}
