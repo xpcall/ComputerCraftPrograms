@@ -1,19 +1,33 @@
 -- a WIP program that makes sure my reactor stays at maximum efficiency
 
-local rodSlots={12,11,13,17}
-local isoSlot=12
-local sNuke={}
-local nuke=peripheral.wrap("top")
+local r=peripheral.wrap("front")
+rs.setOutput("front",true)
 while true do
-	sleep(20)
-	sNuke.heat=nuke.getHeat()
-	sNuke.maxheat=nuke.getMaxHeat()
-	local sNuke.inv={}
-	for l1=0,nuke.getSizeInventory() do
-		local s=nuke.getStackInSlot(l1)
-		if s then
-			sNuke.inv[l1]={s.name,s.qty,s.dmg}
-		end
-	end
-	
+  local p=r.getStackInSlot(20)
+  if p then
+    while true do
+      if p then
+        if p.id==30203 then
+          break
+        end
+      end
+      rs.setOutput("front",false)
+      sleep(5)
+      p=r.getStackInSlot(20)
+    end
+    rs.setOutput("front",true)
+  else
+    rs.setOutput("front",false)
+    while not p do
+      sleep(5)
+      p=r.getStackInSlot(20)
+      if p then
+        if p.id==30203 then
+          break
+        end
+      end
+    end
+    rs.setOutput("front",true)
+  end
+  sleep(5)
 end
