@@ -1,8 +1,7 @@
--- idk why this is here
+-- Dont use this old pile of crap, I now know how to do a command line 
 
--- By Mandrake25 (Mandrake Fernflower)
+-- By Mfernflower
 -- Some code from https://raw.github.com/FuzzyPurp/Redworks-FLOPPY/blob/master/Disk/startup and https://raw.github.com/xlilcasper/Redworks/master/rom/redworks/programs/adduser
--- OH NOES! The indenting is all crapped up. Sorry for that (fixed by pixel)
 
 if term.isColor() then
 	term.setTextColor(colors.lime)

@@ -1,4 +1,6 @@
--- command thingy for adventure cactuses
+-- Command thingy for adventure cactuses
+-- CPS stands for Command Processing Service, Not Child Protective Services 
+-- This thing would always crash every 5 seconds. It was a pain to have to restart it - MFenflower
 
 os.unloadAPI("rom/programs/asm")
 os.loadAPI("rom/programs/asm")

@@ -1,4 +1,5 @@
--- broken interactive rednet sniffer
+-- Broken interactive rednet sniffer
+-- A true classic
 
 local Mx,My=term.getSize()
 local menudat={1}

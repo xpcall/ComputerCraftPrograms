@@ -1,5 +1,5 @@
--- pretty
-
+-- A analogue oscilloscope 
+-- What more do you want from life?
 local hist={}
 local Mx,My=term.getSize()
 local tmax=0
