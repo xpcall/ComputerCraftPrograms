@@ -3,6 +3,9 @@
 local hist={}
 local Mx,My=term.getSize()
 local tmax=0
+if term.isColor() then
+term.setTextColor(colors.green)
+end
 while true do
 	table.remove(hist,Mx)
 	if rs.getAnalogInput("back")>tmax then
