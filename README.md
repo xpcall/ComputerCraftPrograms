@@ -1,4 +1,4 @@
 ComputerCraft
 =============
 
-Various CC programs and apis ive made over the past year
+Various CC programs and apis made over the past year or so
