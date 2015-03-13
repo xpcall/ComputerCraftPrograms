@@ -1,4 +1,4 @@
 ComputerCraft
 =============
 
-Various CC programs and apis made over the past year or so
+Various CC programs and apis made along time ago, not many actually work (MFernflower and infinikiller64)
