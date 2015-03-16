@@ -1,0 +1,54 @@
+-- FIBERNET FTP SERVER
+-- CODE BY Imgoodisher (my freind lol) 
+-- edited by Mandrake25
+side = "top"
+if fs.exists("bin/crazyapi")==false then
+ print("This program requires Crazyapi")
+ print("Installing crazyapi with cc-get...")
+ shell.run("cc-get", "install", "crazyapi")
+end
+shell.run("crazyapi")
+networkOpen(side)
+local label = os.getComputerLabel()
+if label then
+else
+label = ""
+end
+print("Server started".." "..textutils.formatTime(os.time(),false).." ".."ID: "..os.getComputerID().." ".."Server Name: "..label)
+while true do
+ id, m = networkIDReceive()
+ cmd = string.sub(m, 1, 5)
+ arg = string.sub(m, 6)
+ print(id.." did "..cmd.." "..textutils.formatTime(os.time(),false))
+ if cmd == "FETCH" then
+  if fs.exists(arg) then 
+  file = io.open(arg, "r")
+  data = file:read("*a")
+  file:close()
+  networkSendToID(id, data)
+  else
+  networkSendToID(id, "ERROR")
+  end
+ elseif cmd == "SENDA" then
+  name = networkReceive()
+  if fs.exists(name) then fs.delete(name) end
+  if name == "startup" then networkSendToID(id, "Error: Name Not Allowed")
+  else
+   file = io.open(name, "w")
+   file:write(arg)
+   file:close()
+   networkSendToID(id, "Success")
+  end
+ elseif cmd == "LISTA" then
+  tFiles = fs.list("")
+  tFiles2 = {}
+  for i,v in pairs(tFiles) do
+   if fs.isDir(v)==false and v~="server" then
+    table.insert(tFiles2, v.."\n")
+   end
+  end
+  data = table.concat(tFiles2)
+--  print(data)
+  networkSendToID(id, data)
+ end
+end

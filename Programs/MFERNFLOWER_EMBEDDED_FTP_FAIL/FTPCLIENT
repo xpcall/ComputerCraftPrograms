@@ -1,0 +1,58 @@
+-- FIBERNET FTP CLIENT
+-- CODE BY Imgoodisher (my freind lol) 
+-- edited by Mandrake25
+side = "top"
+if fs.exists("bin/crazyapi")==false then
+ print("This program requires crazyapi")
+ print("Installing crazyapi with cc-get...")
+ shell.run("cc-get", "install", "crazyapi")
+end
+shell.run("crazyapi")
+print("Please enter the side you would like to open")
+side = io.read()
+networkOpen(side)
+print("Please enter the servers ID")
+id = io.read()
+serverid = tonumber(id)
+while true do
+ clearTerm()
+ tOptions = {"Get file", "Send file", "List", "Exit"}
+ selected = selectWindow(1, 1, "What would you like to do?", tOptions, 1)
+ clearTerm()
+ if selected == 1 then
+  print("What file do you want to get?")
+  name = read()
+  print("Where do you want to save it?")
+  path = read()
+  networkSendToID(serverid, "FETCH"..name)
+  data = networkReceive()
+  if data == "ERROR" then
+  print("File not found")
+  read()
+  else
+  file = io.open(path, "w")
+  file:write(data)
+  file:close()
+  print("Done")
+  sleep(0.5)
+  end
+ elseif selected == 2 then
+  print("What file would you like to send?")
+  path = read()
+  print("What do you want the file to be named?")
+  name = read()
+  file = io.open(path, "r")
+  data = file:read("*a")
+  file:close()
+  networkSendToID(serverid, "SENDA"..data)
+  networkSendToID(serverid, name)
+  print(networkReceive())
+ elseif selected == 3 then
+  networkSendToID(serverid, "LISTA")
+  print(networkReceive())
+  print("Press any key to continue")
+  pressAnyKey()
+ elseif selected == 4 then
+  shell.run("shell")
+ end
+end

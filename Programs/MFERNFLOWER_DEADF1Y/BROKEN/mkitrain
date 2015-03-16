@@ -1,0 +1,32 @@
+-- SYSLINUX like installer by Mandrake25
+file = "/rom/programs/SpongeRa1n"
+title = "SpongeRa1n"
+label = ""
+print("Bootdisk Maker 1.0")
+print("By Mandrake25")
+print("Press any key to continue")
+read()
+print("Would you like to install "..title.." to a floppy disk?")
+print("y or n")
+check = io.read()
+if check == "y" then
+print("Please enter the side the disk is in")
+side = io.read()
+path = disk.getMountPath(side) 
+if path then
+print("Will install to that disk")
+read()
+fs.copy(file,path.."/".."startup")
+disk.setLabel(side,label)
+print("Done")
+print("BOOTIMAGE "..file.." has been installed to "..path)
+read()
+disk.eject(side)  
+os.reboot()
+else
+print("Not a valid disk")
+end
+else
+print("Will not install")
+end
+

@@ -1,0 +1,79 @@
+-- By Mandrake25
+-- Some code from https://github.com/FuzzyPurp/Redworks-FLOPPY/blob/master/Disk/startup and https://raw.github.com/xlilcasper/Redworks/master/rom/redworks/programs/adduser
+print("        |||")
+print("       (o o)")
+print("+-oooO--(_)-------+")
+print("|                 |")
+print("|SpongeRa1n       |")
+print("|                 |")
+print("+------------Ooo--+")
+print("      |__|__|")
+print("      || ||")
+print("     ooO Ooo")
+sleep(2)
+term.clear()
+print("\n What would you like to do to this terminal?")
+print("1. Start Shell\n2. Copy HDD to disk\n3. Pwn startup \n4. Dump Redworks logons \n5. Quit")
+input = read()
+if input == "1" then
+shell.run("shell")
+elseif input == "2" then
+print("Please reinsert the bootdisk and hit enter")
+while true do
+local event, param = os.pullEvent() -- Thanks Onionion
+if event == "disk" then
+side = param
+break
+end
+end
+path = disk.getMountPath(side) 
+if path then
+read()
+print("Copying")
+fs.makeDir(path.."/"..os.computerID()) 
+for i, v in pairs(fs.list("/")) do -- Patched by Advert
+if v ~= "rom" and v ~= "disk" and v ~= "startup" and v:sub(1, 4) ~= "rom/" and v:sub(1, 4) ~= "disk/" and v:sub(1, 4) ~= "startup"  then
+fs.copy("/"..v,path.."/"..os.computerID().."/"..v)
+end
+end
+print("Done")
+read()
+disk.eject(side)
+os.reboot()
+else
+print("Not a valid disk")
+end
+elseif input == "3" then
+fs.delete("startup")
+print("Pwned")
+read()
+os.reboot()
+elseif input == "4" then
+if fs.exists("ACCOUNTS.F") then
+print("File exists. Loading \n")
+local tPasswd = { }
+local file = io.open("ACCOUNTS.F")
+local sLine = file:read()
+while sLine do
+for k, v in string.gmatch(sLine, "(%w+)%s(%w+)") do
+tPasswd[k]=v			
+end
+sLine = file:read()
+end
+file:close()
+for user,pass in pairs(tPasswd) do
+print(user .. " " .. pass .."\n")
+end
+else
+print("Could not find a Redworks users file")
+read()
+os.reboot()
+end
+elseif input == "5" then
+print("Please remove bootfloppy and hit enter")
+read()
+os.reboot()
+elseif input ~= "1" and input ~= "2" and input ~= "3" and input ~= "4" and input ~= "5" then
+print("Invalid choice")
+os.reboot()
+end
